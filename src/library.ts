@@ -7,6 +7,8 @@ import { createPattern } from './pattern';
 import type { Pattern } from './pattern';
 import { PlanStore } from './storage';
 import { calculate, createGeometry } from './yoke';
+import { copyText, errorText, LocalizedError, onLanguageChange, setText, t } from './i18n';
+import type { Message, Parameters } from './i18n';
 
 function element<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -31,14 +33,14 @@ export class PlanLibrary {
   ) {
     element('show-plans').addEventListener('click', () => {
       this.dialog.showModal();
-      element('plan-notice').textContent = '';
+      setText(element('plan-notice'), '');
     });
     element('close-plans').addEventListener('click', () => this.dialog.close());
     this.dialog.addEventListener('close', () => {
-      element('plan-notice').textContent = element('library-error').textContent;
+      copyText(element('plan-notice'), element('library-error'));
       element('show-plans').focus();
     });
-    this.name.value = 'Untitled yoke';
+    this.name.value = t('Untitled yoke');
     this.name.addEventListener('input', () => this.markDirty());
     element('save-plan').addEventListener('click', () => void this.action(() => this.save()));
     element('open-plan').addEventListener('click', () => void this.action(() => this.open()));
@@ -47,7 +49,7 @@ export class PlanLibrary {
       if (this.busy || !this.confirmDiscard()) return;
       this.id = null;
       this.createdAt = 0;
-      this.name.value = 'Untitled yoke';
+      this.name.value = t('Untitled yoke');
       Object.assign(this.pattern, createPattern(createGeometry(calculate({ si: 64, ip: 8, sf: 160 }), 1)));
       this.dirty = false;
       this.revision++;
@@ -66,7 +68,7 @@ export class PlanLibrary {
     });
     this.saved.addEventListener('change', () => this.updateStatus());
     element('persist-storage').addEventListener('click', () => void this.action(async () => {
-      if (!navigator.storage?.persist) throw new Error('This browser does not support persistent-storage requests.');
+      if (!navigator.storage?.persist) throw new LocalizedError('This browser does not support persistent-storage requests.');
       const granted = await navigator.storage.persist();
       this.message(granted
         ? 'Persistent storage granted. Clearing browser data can still delete plans; keep JSON backups.'
@@ -77,6 +79,7 @@ export class PlanLibrary {
       event.preventDefault();
       event.returnValue = '';
     });
+    onLanguageChange(() => this.updateStatus());
     this.updateStatus();
   }
 
@@ -100,9 +103,9 @@ export class PlanLibrary {
   }
 
   private updateStatus(): void {
-    element('plan-status').textContent = this.dirty
+    setText(element('plan-status'), this.dirty
       ? 'Unsaved changes'
-      : this.id ? 'Saved in this browser' : 'Browser only - not saved';
+      : this.id ? 'Saved in this browser' : 'Browser only - not saved');
     for (const id of ['save-plan', 'new-plan', 'export-plan', 'import-plan', 'import-file']) {
       element<HTMLButtonElement | HTMLInputElement>(id).disabled = this.busy;
     }
@@ -113,27 +116,26 @@ export class PlanLibrary {
     element<HTMLButtonElement>('persist-storage').disabled = this.busy || !navigator.storage?.persist;
   }
 
-  private message(text: string): void {
-    element('library-message').textContent = text;
-    element('library-error').textContent = '';
-    element('plan-notice').textContent = '';
+  private message(key: Message, parameters: Parameters = {}): void {
+    setText(element('library-message'), key, parameters);
+    setText(element('library-error'), '');
+    setText(element('plan-notice'), '');
   }
 
   private async action(operation: () => void | Promise<void>): Promise<void> {
     if (this.busy) return;
     this.busy = true;
-    element('library-error').textContent = '';
-    element('plan-notice').textContent = '';
+    setText(element('library-error'), '');
+    setText(element('plan-notice'), '');
     this.updateStatus();
     try {
       await operation();
     } catch (error) {
-      const text = error instanceof Error ? error.message : 'The operation failed.';
-      element('library-message').textContent = '';
-      element('library-error').textContent = error instanceof DOMException && error.name === 'QuotaExceededError'
-        ? 'Browser storage is full. Your current plan is still available; export JSON as a backup.'
-        : `${text} Your current plan has not been discarded.`;
-      if (!this.dialog.open) element('plan-notice').textContent = element('library-error').textContent;
+      setText(element('library-message'), '');
+      setText(element('library-error'), () => errorText(error, 'The operation failed.')
+        + (error instanceof DOMException && error.name === 'QuotaExceededError'
+          ? '' : t(' Your current plan has not been discarded.')));
+      if (!this.dialog.open) copyText(element('plan-notice'), element('library-error'));
     } finally {
       this.busy = false;
       this.updateStatus();
@@ -141,11 +143,11 @@ export class PlanLibrary {
   }
 
   private confirmDiscard(): boolean {
-    return (!this.dirty && !this.hasDraft()) || window.confirm('Replace the current editor plan and discard its unsaved changes? Saved copies will not be changed.');
+    return (!this.dirty && !this.hasDraft()) || window.confirm(t('Replace the current editor plan and discard its unsaved changes? Saved copies will not be changed.'));
   }
 
   private snapshot(): PlanDocument {
-    if (this.hasDraft()) throw new Error('Select Calculate / Apply before saving or exporting changed inputs.');
+    if (this.hasDraft()) throw new LocalizedError('Select Calculate / Apply before saving or exporting changed inputs.');
     const now = Date.now();
     return documentFromPattern(this.pattern, {
       id: this.id ?? crypto.randomUUID(), name: planName(this.name.value),
@@ -172,7 +174,7 @@ export class PlanLibrary {
     const document = this.snapshot();
     serializeDocument(document);
     const revision = this.revision;
-    element('library-message').textContent = 'Saving...';
+    setText(element('library-message'), 'Saving...');
     await this.store.save(document);
     this.id = document.id;
     this.createdAt = document.createdAt;
@@ -196,7 +198,7 @@ export class PlanLibrary {
 
   private async open(): Promise<void> {
     const document = await this.store.get(this.saved.value);
-    if (!document) throw new Error('That saved plan no longer exists. Reload the library and try again.');
+    if (!document) throw new LocalizedError('That saved plan no longer exists. Reload the library and try again.');
     const validated = validateDocument(document);
     if (!this.confirmDiscard()) return;
     this.load(validated);
@@ -206,8 +208,8 @@ export class PlanLibrary {
 
   private async delete(): Promise<void> {
     const id = this.saved.value;
-    const name = this.saved.selectedOptions[0]?.textContent ?? 'this plan';
-    if (!window.confirm(`Delete the saved copy of "${name}"? This cannot be undone.`)) return;
+    const name = this.saved.selectedOptions[0]?.textContent ?? t('this plan');
+    if (!window.confirm(t('Delete the saved copy of "{name}"? This cannot be undone.', { name }))) return;
     await this.store.delete(id);
     if (id === this.id) {
       this.id = null;
@@ -233,7 +235,7 @@ export class PlanLibrary {
   }
 
   private async import(file: File): Promise<void> {
-    if (file.size > MAX_DOCUMENT_BYTES) throw new Error('Plan files must be no larger than 1 MiB.');
+    if (file.size > MAX_DOCUMENT_BYTES) throw new LocalizedError('Plan files must be no larger than 1 MiB.');
     const document = parseDocument(await file.text());
     if (!this.confirmDiscard()) return;
     const now = Date.now();

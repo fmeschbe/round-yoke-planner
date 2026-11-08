@@ -22,6 +22,16 @@ Open the local URL printed by Vite, normally `http://127.0.0.1:5173`.
 
 ## Using the planner
 
+Use the header's flag selector: **🇬🇧 English**, **🇩🇪 Deutsch**, or
+**🇳🇴 Norsk (bokmål)**. The flags are enlarged, with accessible language names
+and no visible label. German browser locales start in German; Norwegian `nb`
+and `no` locales start in Bokmål; other locales start in English.
+Your manual selection is remembered locally when browser storage is available.
+Switching languages preserves the current plan, unapplied inputs, and unsaved
+changes. Plan names, SI/IP/SF abbreviations, and JSON field names are unchanged.
+Controls, instructions, errors, confirmations, and accessibility labels are
+translated.
+
 1. Enter **SI** (initial stitches), **IP** (increase points per increase round),
    and **SF** (final stitches), then select **Calculate / Apply**.
 2. Choose the number of **repeating segments**. The chart edits one segment;
@@ -119,6 +129,22 @@ npm run test:browser -- --workers=3
 
 The browser suite covers Chromium, Firefox, and WebKit and manages its own
 local development server. No test server needs to be started manually.
+
+### Adding translations
+
+`src/i18n.ts` supplies typed message lookup, parameter interpolation, live UI
+updates, and language-preference handling. English source messages are the
+canonical keys; `src/locales/de.ts` and `src/locales/nb.ts` contain the German
+and Norwegian Bokmål translations.
+Static HTML text and labels are localized from those keys; generated content
+uses `t`, and persistent status/error messages retain bindings for live updates.
+Localized errors retain their key and parameters rather than relying on
+browser-generated error text.
+
+To add a language, provide a complete catalog with the same keys and parameter
+placeholders, register it in `Language` and `catalogs`, and add its selector
+option. Keep plan documents language-independent. Tests check static-copy
+coverage, matching placeholders, language preferences, and plan preservation.
 
 The generated `dist/` directory can be served by a static web host over HTTPS
 (or localhost for development). Static hosting does not require a plan-storage

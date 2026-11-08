@@ -1,3 +1,6 @@
+import { LocalizedError } from './i18n';
+import type { Message, Parameters } from './i18n';
+
 export const MAX_CHART_SLOTS = 5000;
 
 export interface Inputs {
@@ -8,9 +11,9 @@ export interface Inputs {
 
 export type InputField = keyof Inputs;
 
-export class PlanError extends Error {
-  constructor(message: string, public field?: InputField) {
-    super(message);
+export class PlanError extends LocalizedError {
+  constructor(message: Message, public field?: InputField, parameters: Parameters = {}) {
+    super(message, parameters);
   }
 }
 
@@ -85,7 +88,7 @@ export function calculate(inputs: Inputs): Calculation {
   const added = ip * 2;
   if (!Number.isSafeInteger(added)) throw new PlanError('The increase count exceeds safe integer arithmetic.', 'ip');
   if ((sf - si) % added !== 0) {
-    throw new PlanError(`The difference must be divisible by ${added} stitches per increase round.`, 'sf');
+    throw new PlanError('The difference must be divisible by {added} stitches per increase round.', 'sf', { added });
   }
   const interval = ip / 2;
   const increases = (sf - si) / added;

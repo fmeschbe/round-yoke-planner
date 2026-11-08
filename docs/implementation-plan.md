@@ -30,21 +30,22 @@ development instructions. Local Git uses `main` and the GitHub repository as
 **Phases 1 and 2 are complete.** Calculator validation, fixed-slot repeating chart,
 palette, confirmed geometry resets, keyboard navigation, responsive layout,
 and SVG/dense annular previews are implemented. The six Phase 1 implementation
-todos below and the Phase 2 local-portability todo are complete; Phases 3 and 4
-remain pending. The Phase 1 refinements were committed and pushed as `387dea0`;
-Phase 2, including modal plan management, is committed locally. Further UI fine
-tuning can follow before Phase 3.
+todos below, the Phase 2 local-portability todo, and English/German/Bokmål localization
+are complete; Phases 3 and 4 remain pending. Phases 1 and 2, including modal plan
+management and collapsed instructions, were pushed through `529728b`.
+English/German/Bokmål localization and the flag-only selector are committed
+locally, without a push. Phase 3 is the next roadmap step.
 
 Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 44 Vitest cases, chart/preview browser acceptance,
-39 library browser acceptance checks (including persistence permissions,
-overlay focus and dismissal, creation choices, and narrow-screen scrolling)
-across Chromium, Firefox, and WebKit, TypeScript checking, production
-build, and visual inspection of the restored production plan and responsive
-library controls.
+Verification completed: 47 Vitest cases and 102 browser acceptance checks for
+the initial English/German implementation, plus 27 targeted language checks
+for the Bokmål/flag refinement across Chromium, Firefox, and WebKit. Coverage
+includes language detection, accessible flag selection, live translation,
+errors, plan preservation, and existing planner/library workflows. TypeScript
+checking, production build, and desktop/mobile layout inspection also passed.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -385,6 +386,41 @@ plan data is sent over the network. Verify modal visibility, focus isolation,
 dismissal, narrow-screen scrolling, explicit creation options, and export of
 the current editor when a different saved entry is selected.
 
+## Localization before Phase 3
+
+Provide English, German, and Norwegian Bokmål translations for the entire application,
+including static controls/instructions, results, confirmations, storage and
+JSON validation errors, chart tooltips, and accessibility labels. Keep the
+Round Yoke product name, SI/IP/SF abbreviations, user-entered plan names, and
+JSON fields unchanged.
+
+Use an enlarged, flag-only header selector (UK, Germany, Norway) without a
+visible label. Retain a localized accessible selector name and language names
+for its options. Initially honor German browser locales and Norwegian `nb`/`no`
+locales (Bokmål); otherwise fall back to English. Remember manual choices in localStorage when
+available; denied preference storage must not prevent using the app.
+Switch languages live without saving or dirtying plans, discarding unapplied
+input, resetting instruction disclosure state, or changing pattern data.
+Update already-visible errors and status messages in the chosen language.
+
+Implemented: typed English-source message keys with German and Norwegian Bokmål
+catalogs in `src/locales/de.ts` and `src/locales/nb.ts`, shared localization helpers
+in `src/i18n.ts`, and structured
+localized errors retaining message keys and parameters. Static HTML copy is
+localized once registered; dynamic views redraw their labels on language changes.
+Status/error bindings preserve live translation without changing plan state.
+No dependency or plan-document migration is needed. Further languages add a
+complete typed catalog and selector option.
+
+Acceptance: browser detection, English fallback, remembered overrides,
+unavailable preference storage, complete static-copy coverage, matching
+translation placeholders, German/Bokmål confirmations/validation/accessibility,
+unchanged JSON and saved status when switching, retained drafts and pattern
+colors, accessible flag-only selection, and readable multilingual desktop/mobile layouts.
+
+Phase 3 must reuse localization for printable headings, instructions, and
+legends without translating user data or JSON schema fields.
+
 ## Phase 3 - Printable HTML
 
 Generate a standalone HTML document from a validated plan snapshot, containing
@@ -458,13 +494,17 @@ budget and bound ancestry computation before allocating a full-circle graph.
    finalize save policy and document limits, implement schema/validation,
    IndexedDB library, and JSON import/export, and validate persistence and
    failure cases. Depends on integration-checks.
-8. **Implementing printable HTML documents** (`printable-html`): generate
+8. **Adding English, German, and Bokmål localization** (`multilingual-ui`): implement
+   typed catalogs, browser detection, remembered live language switching, and
+   a flag-only selector and translated UI/errors/accessibility, preserving plan state and JSON.
+   Complete before Phase 3.
+9. **Implementing printable HTML documents** (`printable-html`): generate
    standalone documents, paginate charts, support browser printing/PDF, and
-   verify offline output. Depends on local-portability.
-9. **Defining stitch ancestry and increase rules** (`ancestry-contract`):
+   verify offline output. Depends on local-portability and multilingual-ui.
+10. **Defining stitch ancestry and increase rules** (`ancestry-contract`):
    confirm technique, anchors, orientation, symmetry, layout limits, and legacy
    conversion policy with worked examples. Depends on printable-html.
-10. **Implementing ancestry-aware planning** (`ancestry-planner`): implement
+11. **Implementing ancestry-aware planning** (`ancestry-planner`): implement
     lineage, chart/preview alignment, document migrations, and updated exports
     with focused compatibility tests. Depends on ancestry-contract.
 

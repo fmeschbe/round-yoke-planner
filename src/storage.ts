@@ -1,4 +1,5 @@
 import type { PlanDocument } from './document';
+import { LocalizedError } from './i18n';
 
 export type PlanSummary = Pick<PlanDocument, 'id' | 'name' | 'updatedAt'>;
 
@@ -27,11 +28,11 @@ export class PlanStore {
       };
       request.onerror = () => {
         settled = true;
-        reject(request.error ?? new Error('Could not open browser storage.'));
+        reject(request.error ?? new LocalizedError('Could not open browser storage.'));
       };
       request.onblocked = () => {
         settled = true;
-        reject(new Error('Browser storage is blocked. Close other planner tabs and try again.'));
+        reject(new LocalizedError('Browser storage is blocked. Close other planner tabs and try again.'));
       };
     }).catch(error => {
       this.database = undefined;
@@ -49,7 +50,7 @@ export class PlanStore {
       let request: IDBRequest<T> | undefined;
       let result: T;
       transaction.oncomplete = () => resolve(result);
-      transaction.onabort = () => reject(transaction.error ?? request?.error ?? new Error('The storage transaction was aborted.'));
+      transaction.onabort = () => reject(transaction.error ?? request?.error ?? new LocalizedError('The storage transaction was aborted.'));
       try {
         request = operation(transaction.objectStore('plans'));
         request.onsuccess = () => { result = request!.result; };

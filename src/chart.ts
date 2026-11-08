@@ -1,5 +1,6 @@
 import { cellKey, colorAt } from './pattern';
 import type { Pattern } from './pattern';
+import { t } from './i18n';
 
 export class Chart {
   private buttons = new Map<string, HTMLButtonElement>();
@@ -22,16 +23,16 @@ export class Chart {
     this.buttons.clear();
     const { geometry } = this.pattern;
     if (!geometry.rows.length) {
-      this.container.textContent = 'No rounds to knit: initial and final stitches are equal.';
+      this.container.textContent = t('No rounds to knit: initial and final stitches are equal.');
       return;
     }
     const table = document.createElement('table');
     const caption = table.createCaption();
-    caption.textContent = `One repeating segment: ${geometry.width} columns, ${geometry.rows.length} rounds. Row 1 is at the top.`;
+    caption.textContent = t('One repeating segment: {columns} columns, {rounds} rounds. Row 1 is at the top.', { columns: geometry.width, rounds: geometry.rows.length });
     caption.className = 'sr-only';
     const head = table.createTHead().insertRow();
     const corner = document.createElement('th');
-    corner.textContent = 'Round';
+    corner.textContent = t('Round');
     corner.scope = 'col';
     head.append(corner);
     for (let column = 0; column < geometry.width; column++) {
@@ -48,12 +49,14 @@ export class Chart {
       const label = document.createElement('th');
       label.scope = 'row';
       label.textContent = String(row.round);
-      label.title = `${row.stitches} stitches around the yoke${row.increase ? '; increase round' : '; plain round'}`;
+      label.title = t(row.increase
+        ? '{stitches} stitches around the yoke; increase round'
+        : '{stitches} stitches around the yoke; plain round', { stitches: row.stitches });
       if (row.increase) {
         const badge = document.createElement('span');
         badge.textContent = '+';
         badge.className = 'increase-badge';
-        badge.setAttribute('aria-label', 'Increase round');
+        badge.setAttribute('aria-label', t('Increase round'));
         label.append(badge);
       }
       tr.append(label);
@@ -83,10 +86,10 @@ export class Chart {
         td.classList.toggle('no-stitch', button.disabled);
         if (markers.has(column)) {
           td.classList.add('increase-point');
-          td.title = 'Evenly spaced increase point (schematic)';
+          td.title = t('Evenly spaced increase point (schematic)');
         }
         if (button.disabled) {
-          button.setAttribute('aria-label', `Round ${row.round}, column ${column + 1}: no stitch`);
+          button.setAttribute('aria-label', t('Round {round}, column {column}: no stitch', { round: row.round, column: column + 1 }));
         } else {
           this.buttons.set(cellKey(row.round, column), button);
         }
@@ -106,12 +109,16 @@ export class Chart {
       const column = Number(button.dataset.column);
       const id = this.pattern.cells.get(key);
       const color = colorAt(this.pattern, round, column);
-      const addition = button.classList.contains('added-stitch') ? '; schematic added stitch' : '';
+      const addition = button.classList.contains('added-stitch') ? t('; schematic added stitch') : '';
       button.style.backgroundColor = color;
       button.classList.toggle('colored', id !== undefined);
-      button.setAttribute('aria-label', `Round ${round}, column ${column + 1}: ${id ? `color ${color}` : 'uncolored stitch'}${addition}`);
+      button.setAttribute('aria-label', t('Round {round}, column {column}: {color}{addition}', {
+        round, column: column + 1, color: id ? t('color {color}', { color }) : t('uncolored stitch'), addition,
+      }));
       button.setAttribute('aria-pressed', String(id !== undefined));
-      button.title = `Round ${round}, column ${column + 1}: ${id ? color : 'uncolored'}${addition}`;
+      button.title = t('Round {round}, column {column}: {color}{addition}', {
+        round, column: column + 1, color: id ? color : t('uncolored'), addition,
+      });
     }
   }
 

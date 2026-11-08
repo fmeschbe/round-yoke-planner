@@ -1,6 +1,7 @@
 import { colorAt } from './pattern';
 import type { Pattern } from './pattern';
 import type { Geometry } from './yoke';
+import { t } from './i18n';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const TAU = Math.PI * 2;
@@ -64,9 +65,9 @@ export class Preview {
   render(): void {
     const { geometry, visibleSegments } = this.pattern;
     if (!geometry.rows.length) {
-      this.container.textContent = 'No rounds to preview.';
-      this.description.textContent = 'Initial and final stitches are equal.';
-      this.mode.textContent = 'No rounds';
+      this.container.textContent = t('No rounds to preview.');
+      this.description.textContent = t('Initial and final stitches are equal.');
+      this.mode.textContent = t('No rounds');
       this.geometry = undefined;
       this.svg = undefined;
       this.paths = [];
@@ -75,7 +76,24 @@ export class Preview {
       return;
     }
     if (this.geometry !== geometry || this.visible !== visibleSegments) this.build();
+    this.updateLabels();
     this.updateColors();
+  }
+
+  private updateLabels(): void {
+    const { geometry, visibleSegments } = this.pattern;
+    this.svg!.querySelector('title')!.textContent = t('Colored round-yoke preview');
+    let description = t('{visible} of {segments} repeating segments, {rounds} rounds, from {si} to {sf} stitches. Schematic, not physical knitting simulation.', {
+      visible: visibleSegments, segments: geometry.segments, rounds: geometry.rows.length,
+      si: geometry.calculation.si, sf: geometry.calculation.sf,
+    });
+    if (Math.ceil(geometry.calculation.ip * visibleSegments / geometry.segments) * geometry.calculation.increases > MAX_MARKERS) {
+      description += t(' Increase points are densely spaced; dashed bands indicate increase rounds.');
+    }
+    this.svg!.querySelector('desc')!.textContent = description;
+    this.description.textContent = description;
+    this.mode.textContent = t(this.svg!.dataset.renderer === 'raster'
+      ? 'Dense preview' : visibleSegments === geometry.segments ? 'Full circle' : 'Sector');
   }
 
   updateColors(): void {
@@ -103,20 +121,15 @@ export class Preview {
       role: 'img', 'aria-labelledby': 'yoke-title yoke-description',
     });
     const title = svgElement('title', { id: 'yoke-title' });
-    title.textContent = 'Colored round-yoke preview';
     const description = svgElement('desc', { id: 'yoke-description' });
-    description.textContent = `${visibleSegments} of ${geometry.segments} repeating segments, ${geometry.rows.length} rounds, from ${geometry.calculation.si} to ${geometry.calculation.sf} stitches. Schematic, not physical knitting simulation.`;
     this.svg.append(title, description);
-    this.description.textContent = description.textContent;
     const cellCount = geometry.rows.reduce((sum, row) => sum + row.columns.length, 0) * visibleSegments;
     const step = (RADIUS - this.inner) / geometry.rows.length;
     if (cellCount > MAX_VECTOR_CELLS) {
-      this.mode.textContent = 'Dense preview';
       this.svg.dataset.renderer = 'raster';
       this.image = svgElement('image', { x, y, width, height, preserveAspectRatio: 'none' });
       this.svg.append(this.image);
     } else {
-      this.mode.textContent = visibleSegments === geometry.segments ? 'Full circle' : 'Sector';
       this.svg.dataset.renderer = 'vector';
       const group = svgElement('g', { class: 'preview-stitches' });
       for (const row of geometry.rows) {
@@ -160,10 +173,6 @@ export class Preview {
           }));
         }
       }
-    }
-    if (denseMarkers) {
-      this.description.textContent += ' Increase points are densely spaced; dashed bands indicate increase rounds.';
-      description.textContent = this.description.textContent;
     }
     this.svg.append(markers);
     this.container.replaceChildren(this.svg);
