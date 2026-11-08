@@ -151,10 +151,13 @@
       </dialog>
 
       <section class="editor" aria-label="Pattern editor">
-        <section class="preview-panel panel" aria-labelledby="preview-heading">
+        <section id="preview-panel" class="preview-panel panel" aria-labelledby="preview-heading">
           <div class="section-heading">
             <div><p class="eyebrow">See it come together</p><h2 id="preview-heading">Yoke preview</h2></div>
-            <span id="preview-mode" class="badge"></span>
+            <div class="preview-heading-actions">
+              <span id="preview-mode" class="badge"></span>
+              <button id="expand-preview" type="button" aria-label="Expand yoke preview" title="Expand yoke preview" aria-pressed="false"><span aria-hidden="true">🖥️</span></button>
+            </div>
           </div>
           <div class="preview-controls">
             <label for="visible-segments">Visible segments
@@ -173,20 +176,39 @@
           <div id="preview"></div>
         </section>
 
-        <section class="chart-panel panel" aria-labelledby="chart-heading">
+        <section id="chart-editor" class="chart-panel panel" aria-labelledby="chart-heading">
           <div class="section-heading">
             <div><p class="eyebrow">One segment, repeated</p><h2 id="chart-heading">Stitch chart</h2></div>
-            <span id="chart-size" class="badge"></span>
+            <div class="chart-heading-actions">
+              <span id="chart-size" class="badge"></span>
+              <button id="expand-chart" type="button" aria-label="Expand stitch chart" title="Expand stitch chart" aria-pressed="false"><span aria-hidden="true">🖥️</span></button>
+            </div>
           </div>
           <div class="chart-controls">
             <label for="segments">Repeating segments
               <select id="segments" aria-describedby="segment-description"></select>
             </label>
-            <p id="segment-description" class="hint"></p>
+            <p id="segment-description" class="sr-only"></p>
+            <div class="chart-tools" role="group" aria-label="Chart editing tools">
+              <span class="chart-divider" aria-hidden="true"></span>
+              <button id="clear-chart" type="button" aria-label="Clear stitch chart" title="Clear stitch chart"><span aria-hidden="true">🧹</span></button>
+              <span class="chart-divider" aria-hidden="true"></span>
+              <button id="select-chart" type="button" aria-label="Select a rectangle" title="Select a rectangle" aria-pressed="false"><span aria-hidden="true">🔲</span></button>
+              <button id="cut-chart" type="button" aria-label="Cut selection" title="Cut selection"><span aria-hidden="true">✂️</span></button>
+              <button id="copy-chart" type="button" aria-label="Copy selection" title="Copy selection"><span aria-hidden="true">📑</span></button>
+              <button id="paste-chart" type="button" aria-label="Paste selection" title="Paste selection" aria-pressed="false"><span aria-hidden="true">📋</span></button>
+            </div>
           </div>
+          <div class="sr-only">
+            <p id="chart-selection" class="hint" aria-live="polite"></p>
+            <p id="chart-edit-status" class="hint" role="status"></p>
+          </div>
+          <p id="chart-edit-error" class="error" role="alert"></p>
           <details id="chart-instructions" class="instructions">
             <summary>Chart instructions</summary>
             <div class="hint">Round labels are continuous. I marks initial plain rounds, Y marks the increase section, and F marks final plain rounds.</div>
+            <div class="hint">Drag or click two corners to select a rectangle. Shift + arrow keys also select. Use Ctrl/Cmd + X, C, or V to cut, copy, or paste. Escape cancels selection.</div>
+            <div class="hint">Clipboard contents stay in this tab and can be pasted into another plan. Uncolored stitches clear destination stitches; blocked slots are skipped.</div>
             <p class="hint">Round 1 is at the top; read down through the rounds. Hatched slots have no stitch.
               Dashed marks indicate increase points. Thicker borders mark schematic added stitches,
               not exact stitch ancestry. Use arrow keys to move, Space or Enter to paint.</p>
@@ -211,6 +233,8 @@
             </aside>
           </div>
         </section>
+        <dialog id="chart-fullscreen" aria-label="Full-screen stitch chart"></dialog>
+        <dialog id="preview-fullscreen" aria-label="Full-screen yoke preview"></dialog>
       </section>
       <p id="status" class="sr-only" role="status"></p>
       <footer>Made for experimenting. Plans stay in your browser. Save manually and keep JSON backups;

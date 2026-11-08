@@ -35,13 +35,20 @@ and printable HTML are complete; Phase 4 remains pending. Phases 1 and 2, includ
 management and collapsed instructions, were pushed through `529728b`.
 English/German/Bokmål localization and the flag-only selector were committed
 as `0229173`. Guided stitch selections are also implemented, and these
-refinements are published through `ba15450`. Phase 3 is committed locally as
-`a3e3c5b`, without pushing. Header save/print shortcuts are committed locally as
-`d42219f`, without pushing. The hamburger menu redesign is committed as
-`4a03a28`, without pushing. Color-preserving geometry changes and optional
-initial/final plain rounds are committed as `7c1b0d9` locally without pushing.
-The preview's angular stitch direction is reversed and committed locally without pushing,
+refinements were published in `ba15450`. Phase 3 was added in
+`a3e3c5b`, header save/print shortcuts in `d42219f`, and the hamburger menu in
+`4a03a28`. Color-preserving geometry changes and optional initial/final plain
+rounds were added in `7c1b0d9`. The preview's angular stitch direction was
+reversed in `1a7e94e`,
 so bottom-centered sectors match the chart's left-to-right order.
+Full-screen chart editing, confirmed clearing, and rectangular cut/copy/paste
+are implemented and published on `main`, together with the preceding refinements.
+The chart header now combines the segment selector and tools in a compact row,
+without visible supporting text or reserved selection-feedback space.
+The full-screen button sits to the right of the columns/rounds indicator;
+vertical dividers separate the segment selector, clear-all action, and selection tools.
+The yoke preview also supports expanded viewing through a top-right button
+beside its mode indicator; this addition is also published on `main`.
 Phase 4 requires confirmation of the ancestry
 contract before implementation.
 
@@ -49,7 +56,7 @@ Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 65 Vitest cases and 190 browser acceptance checks across
+Verification completed: 71 Vitest cases and 214 browser acceptance checks across
 Chromium, Firefox, and WebKit. Coverage includes cascading stitch selections,
 explicit Apply/color-loss confirmation, legacy-plan restoration, language switching,
 and existing planner/library workflows. Print coverage includes offline localized
@@ -73,6 +80,16 @@ Preview-direction verification passed 100 affected browser checks across all
 three engines, with two PDF API skips. Coverage includes colored vector repeats,
 raster pixels at repeat boundaries, mirrored markers, centered bounds, and
 localized printable preview orientation. Unit cases and production build pass.
+Chart editing coverage includes modal expansion/focus/mobile layout, confirmed
+clearing, mouse dragging/two-corner taps/keyboard selection, blocked slots,
+copied blanks, exact clipping/cancellation, palette-limit rejection, cross-plan
+clipboard colors, saved/dirty state, localized selections, and persistence.
+Compact-header verification passed 51 chart-editing/localization checks across
+all three engines, plus production build and German desktop/mobile inspection.
+Expanded-preview verification passed 88 preview/chart/localization/print checks
+across all engines, with two PDF API skips. Coverage includes placement, scaling,
+controls, saved-state retention, focus restoration, translations, empty previews,
+and unchanged printable output; German desktop/mobile layouts were inspected.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -142,6 +159,7 @@ Proposed files:
 - `src/main.ts`: bootstrap, application state, action handlers, and coordination.
 - `src/yoke.ts`: validation, calculation, segment divisors, and row slot layout.
 - `src/pattern.ts`: palette IDs, cell edits, palette updates, and geometry remapping.
+- `src/clipboard.ts`: rectangle snapshots, cuts, ordinal paste candidates, and palette reuse.
 - `src/chart.ts`: accessible chart, increase overlays, and delegated events.
 - `src/preview.ts`: annular geometry, SVG rendering, and bounded dense rendering.
 - `src/styles.css`: responsive layout, palette, chart, focus, and disabled states.
@@ -347,6 +365,43 @@ tab stop with arrow-key chart navigation. Space/Enter performs the same action
 as clicking. Distinguish disabled slots and clear/background colors without
 relying exclusively on color.
 
+### Chart editing tools
+
+Provide emoji controls with localized accessible names/tooltips for expanded
+view, clear, rectangle selection, cut, copy, and paste. Expanded view uses a
+native modal covering the browser viewport with the existing chart/palette/tools,
+not duplicate editor state. Restore the same panel and opener focus on exit.
+Escape first cancels active selection/paste, then exits the modal.
+
+Clear removes only color assignments after confirmation. Rectangles include
+blocked slots and support dragging, two corner clicks/taps with scrolling,
+and Shift + arrows. Keep ordinary paint/navigation behavior outside selection
+mode and retain selections on language switches. Geometry changes reset selection.
+Combine the labeled segment selector and emoji tools in one responsive,
+non-wrapping row, with dividers before and after clear-all. Keep full-screen
+in the heading beside the columns/rounds badge. Compact controls on narrow screens and allow horizontal
+toolbar scrolling where needed. Keep segment descriptions and selection/action
+announcements screen-reader-only, so they consume no space and cannot shift
+the chart during selection. Show paste errors separately as visible alerts.
+
+Copy snapshots each selected row's real-stitch sequence as color values or
+uncolored entries, omitting blocked slots without compressing away empty rows.
+Cut snapshots first and immediately clears selected assignments. Use an in-tab
+clipboard retained between plans, not the system clipboard or persisted data.
+Paste-button mode chooses a top-left destination by click/tap; Ctrl/Cmd + V
+uses the selection's top-left corner or focused stitch. Ctrl/Cmd + C/X copy/cut;
+do not intercept text-input shortcuts.
+
+Map each row to real destination stitches at or after the chosen column.
+Uncolored entries clear destination colors. Compute the candidate and exact
+colored-omission count before applying; confirm clipped colors, but omit
+out-of-bounds blanks without prompting. Cancel changes nothing and retains
+paste mode; the clipboard always retains the full snapshot. Reuse matching
+palette values, add missing colors, retain paint selection/background, and
+reject palette overflow before changing cells. Rebuild preview colors and mark
+only actual pattern changes unsaved. Selection/clipboard/modal state never
+enters saved JSON or printed documents; no undo/redo or system clipboard is added.
+
 ## Preview and performance
 
 Render an annular sector with angular span `2 * pi * visibleSegments / S`.
@@ -385,6 +440,15 @@ visible-segment choice.
 A raster fallback is limited to preview rendering. The editable chart remains
 semantic HTML and requires no virtualization under the confirmed slot budget.
 Provide a textual preview description for accessibility.
+
+Provide a localized top-right expansion button beside the preview-mode badge,
+matching the chart's icon and header styling. Move the existing preview panel
+into a native viewport-filling modal, preserving its controls, renderer, colors,
+and aspect ratio; do not clone editor state or alter detached printable previews.
+Scale the SVG to the available space and retain the existing bounded raster
+resolution. Expanded-view toggles do not mark plans dirty; visible-segment edits
+retain their existing save behavior. Close through the return icon or Escape,
+restoring the same panel and opener focus. Empty previews can also be expanded.
 
 ## Implementation todos and dependencies
 
@@ -684,11 +748,25 @@ budget and bound ancestry computation before allocating a full-circle graph.
     vector/raster mapping and markers, retain sector centering and stored
     colors, and verify chart/preview and printable orientation. Complete;
     depends on plain-rounds.
+18. **Adding chart editing tools** (`chart-editing`): implement expanded modal
+    editing, confirmed clearing, pointer/touch/keyboard rectangle selection,
+    in-tab ordinal cut/copy/paste with clipping confirmation, palette reuse,
+    localization, and persistence/regression validation. Complete; depends on
+    preview-direction.
+19. **Compacting the chart header** (`compact-chart-header`): combine segment
+    controls and icons in one row, remove visible supporting text and feedback
+    reservation, retain accessibility/errors, and verify multilingual layouts.
+    Complete; depends on chart-editing.
+20. **Adding expanded yoke preview** (`preview-fullscreen`): add top-right
+    expansion beside the mode badge, preserve controls/state and aspect ratio,
+    restore panel/focus, localize, and verify mobile, empty, and printed previews.
+    Complete; depends on compact-chart-header.
 
 ## Scope exclusions and considerations
 
 No server storage, authentication, synchronization, undo/redo, gauge inputs,
-physical tension/drape simulation, or advanced painting tools in this roadmap.
+physical tension/drape simulation, or painting tools beyond the confirmed
+rectangle clipboard operations in this roadmap.
 Persistence/import/export are deferred to Phase 2, printable HTML to Phase 3,
 and stitch ancestry/increase technique to Phase 4.
 No repository initialization, commits, or deployment setup without a separate

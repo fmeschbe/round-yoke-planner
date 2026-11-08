@@ -71,6 +71,41 @@ points; thicker borders mark schematic added stitches on increase rounds.
 Arrow keys move between real stitches, Home/End move to the ends of a row,
 and Space/Enter paints.
 
+### Chart editing tools
+
+The full-screen button sits beside the columns/rounds indicator. The segment
+selector and editing tools share one compact row, with vertical dividers
+separating the selector, clear-all action, and selection tools. Supporting text
+and selection announcements are hidden from view but retained for screen readers;
+errors remain visible. On very narrow screens, the toolbar scrolls horizontally.
+
+Use **🖥️** to fill the browser viewport with the chart, palette, and editing
+tools. **↩️** returns to the normal layout. Escape first cancels an active
+selection/paste operation, then exits the expanded view.
+
+**🧹** clears all placed colors after confirmation, retaining the chart size,
+palette, background, and selected paint color.
+
+Choose **🔲**, then drag or click/tap two opposite corners to select a rectangle,
+including no-stitch slots. You can scroll between corner selections.
+**Shift + arrow keys** also selects a rectangle. **📑** copies and **✂️** copies
+then immediately clears the selected colors. **📋** starts paste mode; click/tap
+the top-left destination, even if that slot is blocked. Ctrl/Cmd + C, X, and V
+work within the chart; keyboard paste uses the current selection's top-left
+corner, or the focused stitch when no rectangle is selected.
+
+Paste preserves real-stitch order within each row, starting at the first
+possible destination stitch at or after the chosen column and skipping blocked
+slots. Uncolored source stitches clear their corresponding destination colors.
+If colored stitches would fall beyond available rows/stitches, confirm the
+exact omitted count or cancel. The clipboard keeps the whole original copy.
+Matching palette colors are reused, missing colors are added, and the selected
+paint color is unchanged. Pastes exceeding the 5,000-color palette limit are rejected.
+
+The clipboard stays in this browser tab and works between plans; it is not the
+system clipboard and is lost on reload. Selection, clipboard, and expanded-view
+state are not saved or exported. Only resulting pattern edits mark a plan unsaved.
+
 Changing the applied inputs or repeating-segment count preserves colors by
 **section round and real-stitch position**, not grid column. The fifth real
 stitch stays the fifth real stitch in its round, even if blocked-cell
@@ -184,6 +219,10 @@ views are collapsed by default and can be expanded when needed.
 Stitches progress counterclockwise, so bottom-centered sectors match the
 chart's left-to-right order. Full circles start at 12 o'clock. Increase markers
 and printable previews use the same orientation; stored colors are unchanged.
+
+The preview's **🖥️** button sits to the right of its Sector/Full circle indicator.
+It expands the preview with its visible-segment controls into the browser
+viewport. **↩️** or Escape restores the normal layout without changing the pattern.
 
 ## Development
 

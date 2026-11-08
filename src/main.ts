@@ -17,6 +17,10 @@ initializeLocalization();
 const form = element<HTMLFormElement>('calculator');
 const segments = element<HTMLSelectElement>('segments');
 const visible = element<HTMLInputElement>('visible-segments');
+const previewPanel = element('preview-panel');
+const previewDialog = element<HTMLDialogElement>('preview-fullscreen');
+const expandPreview = element<HTMLButtonElement>('expand-preview');
+let previewPlaceholder: Comment | undefined;
 const pattern = createPattern(createGeometry(calculate(DEFAULT_INPUTS), 1));
 const preview = new Preview(element('preview'), element('preview-description'), element('preview-mode'), pattern);
 const chart = new Chart(element('chart'), pattern, (round, column) => {
@@ -24,6 +28,10 @@ const chart = new Chart(element('chart'), pattern, (round, column) => {
   library.markDirty();
   updateColors();
   setText(element('status'), 'Updated round {round}, column {column}.', { round, column: column + 1 });
+}, () => {
+  library.markDirty();
+  renderPalette();
+  updateColors();
 });
 const library = new PlanLibrary(pattern, () => {
   const calculation = pattern.geometry.calculation;
@@ -67,6 +75,34 @@ function updateColors(): void {
   chart.updateColors();
   preview.updateColors();
 }
+
+function renderPreviewExpansion(): void {
+  const expanded = previewDialog.open;
+  const label = t(expanded ? 'Exit full-screen preview' : 'Expand yoke preview');
+  expandPreview.setAttribute('aria-label', label);
+  expandPreview.title = label;
+  expandPreview.setAttribute('aria-pressed', String(expanded));
+  expandPreview.querySelector('span')!.textContent = expanded ? '↩️' : '🖥️';
+}
+
+expandPreview.addEventListener('click', () => {
+  if (previewDialog.open) {
+    previewDialog.close();
+    return;
+  }
+  previewPlaceholder = document.createComment('preview position');
+  previewPanel.before(previewPlaceholder);
+  previewDialog.append(previewPanel);
+  previewDialog.showModal();
+  renderPreviewExpansion();
+});
+
+previewDialog.addEventListener('close', () => {
+  previewPlaceholder?.replaceWith(previewPanel);
+  previewPlaceholder = undefined;
+  renderPreviewExpansion();
+  expandPreview.focus();
+});
 
 function renderConfiguration(clearVisibleError = true): void {
   const { geometry } = pattern;
@@ -296,6 +332,7 @@ onLanguageChange(() => {
   renderInputs(readInputs());
   renderConfiguration(false);
   renderPalette();
+  renderPreviewExpansion();
   scroll.scrollLeft = scrollLeft;
   scroll.scrollTop = scrollTop;
 });

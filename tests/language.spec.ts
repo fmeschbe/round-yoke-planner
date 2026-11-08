@@ -53,7 +53,7 @@ test('uses German browser preferences and translates instructions, accessibility
         if (text) sources.push(text);
       }
     }
-    const unchanged = ['Round Yoke', 'English', 'Deutsch', 'Norsk (bokmål)', '🇬🇧', '🇩🇪', '🇳🇴', '🖨️', '💾', '☰', 'SI', 'IP', 'SF'];
+    const unchanged = ['Round Yoke', 'English', 'Deutsch', 'Norsk (bokmål)', '🇬🇧', '🇩🇪', '🇳🇴', '🖨️', '💾', '☰', '🖥️', '🧹', '🔲', '✂️', '📑', '📋', 'SI', 'IP', 'SF'];
     return sources.filter(text => !keys.includes(text) && !unchanged.includes(text) && !/^\d+$/.test(text));
   }, { html, keys: Object.keys(catalogs.en) });
   expect(missing).toEqual([]);
