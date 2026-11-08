@@ -14,13 +14,17 @@
           <h1>Round Yoke</h1>
           <p class="subtitle">Plan your increases. Find your pattern.</p>
         </div>
-        <span class="session-badge">Browser only &middot; not saved</span>
+        <div class="header-actions">
+          <span id="plan-status" class="session-badge" aria-live="polite">Browser only &middot; not saved</span>
+          <button id="show-plans" type="button" aria-haspopup="dialog" aria-controls="plans-dialog">Your Plans</button>
+        </div>
       </header>
+      <p id="plan-notice" class="error" role="alert"></p>
 
       <section class="setup panel" aria-labelledby="setup-heading">
         <div class="setup-inputs">
           <h2 id="setup-heading">Start with your stitches</h2>
-          <form id="calculator" novalidate>
+          <form id="calculator" novalidate autocomplete="off">
             <div class="input-fields">
               <label for="si">Initial stitches <span>SI</span>
                 <input id="si" name="si" type="number" min="1" step="1" value="64" aria-describedby="si-error">
@@ -56,6 +60,57 @@
           </details>
         </div>
       </section>
+
+      <dialog id="plans-dialog" class="library panel" aria-labelledby="library-heading">
+        <div class="section-heading">
+          <h2 id="library-heading">Your Plans</h2>
+          <button id="close-plans" type="button" aria-label="Close Your Plans">Close</button>
+        </div>
+        <h3>Current plan</h3>
+        <div class="library-controls">
+          <label for="plan-name">Plan name
+            <input id="plan-name" type="text" maxlength="100" value="Untitled yoke" autocomplete="off" autofocus>
+          </label>
+          <div class="library-actions">
+            <button id="save-plan" class="primary" type="button">Save plan</button>
+            <button id="export-plan" type="button">Export current plan as JSON</button>
+          </div>
+        </div>
+        <h3>Saved plans</h3>
+        <div class="library-controls">
+          <label for="saved-plans">Saved in this browser
+            <select id="saved-plans" aria-describedby="library-help"></select>
+          </label>
+          <div class="library-actions">
+            <button id="open-plan" type="button">Open plan</button>
+            <button id="delete-plan" type="button">Delete saved plan</button>
+          </div>
+        </div>
+        <fieldset class="new-plan-options" aria-describedby="new-plan-help">
+          <legend>New plan</legend>
+          <div class="library-actions">
+            <button id="new-plan" type="button">New empty plan</button>
+            <button id="import-plan" type="button">New plan from JSON</button>
+            <input id="import-file" type="file" accept=".json,application/json" hidden>
+          </div>
+          <p id="new-plan-help" class="hint">Both options replace the current plan in the editor.
+            Unsaved changes require confirmation; existing saved copies stay untouched.
+            Empty plans start with default stitch counts and no colors.
+            JSON plans are validated first and remain unsaved until you select Save. File limit: 1 MiB.</p>
+        </fieldset>
+        <p id="library-message" class="hint" role="status"></p>
+        <p id="library-error" class="error" role="alert"></p>
+        <p id="library-help" class="hint">Save is manual. Edit the name and Save to rename a plan.
+          Apply input changes before saving. Your most recently saved plan reopens on a new visit.
+          Export downloads the current applied plan, not the selected saved entry.</p>
+        <details>
+          <summary>About local storage and backups</summary>
+          <p class="hint">Plans stay in this browser profile and website origin, with no server storage
+            or synchronization. Clearing browser data can delete them; private browsing may be temporary.
+            Export JSON backups to move plans between browsers or devices.</p>
+          <button id="persist-storage" type="button">Request persistent storage</button>
+        </details>
+      </dialog>
 
       <section class="editor" aria-label="Pattern editor">
         <section class="preview-panel panel" aria-labelledby="preview-heading">
@@ -119,7 +174,8 @@
         </section>
       </section>
       <p id="status" class="sr-only" role="status"></p>
-      <footer>Made for experimenting. Your work stays in this tab and is lost when you reload.</footer>
+      <footer>Made for experimenting. Plans stay in your browser. Save manually and keep JSON backups;
+        unsaved changes are lost when you leave.</footer>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

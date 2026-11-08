@@ -8,8 +8,9 @@ or full circle.
 
 At planning start, `/Volumes/src/scratch/knitting` was a greenfield workspace
 with `NOTES.md` (101 lines), no implementation, dependency manifest, test suite,
-build configuration, or Git repository. Phase 1 now supplies the browser
-application, development/build configuration, and automated tests.
+build configuration, or Git repository. Phases 1 and 2 now supply the browser
+application, local plan storage, JSON portability, development/build
+configuration, and automated tests.
 
 `NOTES.md` describes the calculator, screen layout, chart interaction, palette,
 and preview. It contains conflicting rules about increase timing and chart
@@ -26,19 +27,24 @@ The project uses Apache License 2.0; `README.md` provides setup, usage, and
 development instructions. Local Git uses `main` and the GitHub repository as
 `origin`.
 
-**Phase 1 is complete.** Calculator validation, fixed-slot repeating chart,
+**Phases 1 and 2 are complete.** Calculator validation, fixed-slot repeating chart,
 palette, confirmed geometry resets, keyboard navigation, responsive layout,
 and SVG/dense annular previews are implemented. The six Phase 1 implementation
-todos below are complete; Phases 2-4 remain pending.
+todos below and the Phase 2 local-portability todo are complete; Phases 3 and 4
+remain pending. The Phase 1 refinements were committed and pushed as `387dea0`;
+Phase 2, including modal plan management, is committed locally. Further UI fine
+tuning can follow before Phase 3.
 
 Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 29 Vitest cases, the 42-case browser acceptance suite,
-and 12 targeted browser checks after adding schematic stitch highlights,
-TypeScript checking, production build, and visual inspection of
-desktop/full-circle and mobile/sector layouts.
+Verification completed: 44 Vitest cases, chart/preview browser acceptance,
+39 library browser acceptance checks (including persistence permissions,
+overlay focus and dismissal, creation choices, and narrow-screen scrolling)
+across Chromium, Firefox, and WebKit, TypeScript checking, production
+build, and visual inspection of the restored production plan and responsive
+library controls.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -47,9 +53,10 @@ The initial browser-engine download timed out; the smaller headless Chromium
 package installed successfully. Browser tests start and stop their own local
 server. No server was left running after implementation.
 
-Runtime state remains session-only, with no remote runtime assets or plan-data
-storage. Reloading intentionally resets the plan. The app opens with a valid
-64/8/160 example and only the clear tool selected.
+Runtime plans remain entirely browser-local, with no remote runtime assets or
+server plan-data storage. Saving is manual; the latest saved plan reopens on
+reload. Without saved plans, the app opens with a valid 64/8/160 example and
+only the clear tool selected. Unsaved changes are not retained on reload.
 
 ## Four-phase roadmap
 
@@ -327,10 +334,32 @@ geometry on load instead of trusting imported calculations.
 
 Use IndexedDB for multiple named plans. Provide save, list/open, rename, and
 delete operations, with confirmation for destructive operations and unsaved
-changes. Decide manual-save versus autosave behavior before implementing this
-phase; do not silently assume persistence from Phase 1's session-only behavior.
+changes. Confirmed behavior is manual Save and automatic reopening of the most
+recently saved plan on startup. Rename by editing the active name and saving.
+Keep plan management in a native modal dialog opened by the header's Your Plans
+button, not a permanently visible panel. Close and Escape dismiss it and return
+focus to the opener; successfully opening or creating a plan also dismisses it.
+Separate current-plan actions from saved-entry actions. Label JSON export as
+exporting the current applied editor plan, not the selected saved entry.
+Offer New empty plan (default counts, no colors) and New plan from JSON.
+Explain that both replace the current editor, confirm before losing unsaved
+changes, and leave stored copies untouched. Validate imports before replacement.
+Imports create a new unsaved plan; Save adds it to the library with a fresh ID.
 Show saving/failure state accurately and preserve the active in-memory plan
-when storage is unavailable or a transaction fails.
+when storage is unavailable or a transaction fails. Deleting the active saved
+copy retains its current pattern in the tab as unsaved work.
+
+Use format `round-yoke-planner`, document version 1, and layout model
+`schematic-v1`. Names are trimmed and limited to 100 characters. Confirmed
+file/document size limit is 1 MiB, measured in UTF-8 bytes; check File.size
+before reading imports. Validate palette IDs, selected color, timestamps, and
+duplicate coordinates as well as the geometry. Do not trust cached derived
+calculations in imported files.
+
+Resolve writes only after transaction completion, not individual request
+success. Save an independent snapshot; edits made during a write remain
+marked unsaved. Startup restoration respects intervening user edits and
+overrides browser-restored form values with the authoritative saved model.
 
 Request persistent storage where supported and explain that permission is not
 guaranteed. Browser data can still be cleared; private sessions may be temporary.
@@ -340,18 +369,21 @@ shared between devices. JSON downloads are the portable backup.
 JSON export must round-trip all editable plan data. Import into a new local
 plan, not an existing plan with a colliding ID. Validate document version,
 numeric constraints, colors, palette references, cell coordinates, layout
-model, and the 5,000-slot chart budget before replacing active state. Set an
-explicit import-file size limit before parsing. Reject unsupported versions
+model, and the 5,000-slot chart budget before replacing active state. Enforce
+the 1 MiB import-file size limit before parsing. Reject unsupported versions
 with actionable feedback; do not silently reinterpret them.
 
-Proposed additions: `src/document.ts` for serialization/validation and
-`src/storage.ts` for IndexedDB transactions, with corresponding focused tests.
-Integrate library/import/export controls into the existing application.
+Implemented additions: `src/document.ts` for serialization/validation,
+`src/storage.ts` for native IndexedDB transactions, and `src/library.ts` for
+library/import/export actions and unsaved-change tracking. Document unit tests
+and `tests/library.spec.ts` cover the new behavior. No dependencies were added.
 
 Acceptance: save/open after reload, isolated named plans, rename/delete,
 lossless JSON round trips, invalid/oversized imports, duplicate IDs, canceled
 navigation, unavailable storage, and quota/transaction failures. Verify no
-plan data is sent over the network.
+plan data is sent over the network. Verify modal visibility, focus isolation,
+dismissal, narrow-screen scrolling, explicit creation options, and export of
+the current editor when a different saved entry is selected.
 
 ## Phase 3 - Printable HTML
 

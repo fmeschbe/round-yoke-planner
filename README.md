@@ -37,15 +37,47 @@ palette color updates all its stitches; removing it clears those stitches.
 
 Round 1 is at the top of the chart; read down through the rounds. Hatched slots
 have no stitch and cannot be painted. Dashed marks indicate schematic increase
-points; thicker borders mark schematic added stitches on increase rounds. Arrow keys move
-between real stitches, Home/End move to the ends of a row, and Space/Enter paints.
+points; thicker borders mark schematic added stitches on increase rounds.
+Arrow keys move between real stitches, Home/End move to the ends of a row,
+and Space/Enter paints.
 
 Changing the applied inputs or repeating-segment count asks for confirmation
 before clearing a nonempty pattern. The palette is retained. Changing only the
 visible-segment count preserves the pattern.
 
-**Plans are not saved yet.** All work stays in the current tab and is lost on
-reload or closing the page. No plan data is sent to a server.
+### Saving, opening, and backing up plans
+
+Saving is **manual**, using IndexedDB in your browser. No plan data is sent to
+a server, and there is no automatic synchronization between devices.
+
+Open **Your Plans** in the header to manage plans in an overlay dialog.
+Select **Close** or press Escape to return to the editor.
+
+- Enter a **Plan name** and select **Save plan** to store the applied yoke,
+  palette, pattern, background, and preview settings. Apply changed calculator
+  inputs before saving. Edit the name and Save again to rename that saved plan.
+- Choose a saved entry and select **Open plan** to load it.
+  The most recently saved plan reopens automatically
+  on your next visit.
+- Select **Delete saved plan** to delete its stored copy, after confirmation.
+  Deleting the active saved copy keeps the current pattern in the tab, unsaved.
+- **Export current plan as JSON** downloads the current applied editor plan,
+  not the selected saved entry, without saving to IndexedDB.
+- Under **New plan**, choose **New empty plan** for default stitch counts and
+  no colors, or **New plan from JSON** to import a validated file. Both replace
+  the current editor plan, confirming before discarding unsaved changes.
+  Saved copies remain untouched. Imports remain unsaved until Save and never
+  overwrite a saved plan with a matching ID. Documents are limited to **1 MiB**.
+
+Opening or starting another plan asks before discarding unsaved changes.
+Unsaved changes are not retained on reload. Saving errors leave the current
+pattern available for editing and JSON export.
+
+Plans belong to the current browser profile and website origin (including its
+port). Clearing browser data can delete them; private-browsing storage may be
+temporary. Use **Request persistent storage** under the local-storage
+explanation to ask the browser to reduce eviction risk, but keep JSON backups
+even if permission is granted.
 
 ### Calculation rules
 
@@ -72,7 +104,7 @@ views can be collapsed to leave more room for the pattern.
 ## Development
 
 ```sh
-npm test                 # Calculator and pattern-state tests
+npm test                 # Calculator, pattern-state, and document tests
 npm run typecheck        # TypeScript checks
 npm run build            # Type-check and build into dist/
 npm run preview          # Serve the production build locally
@@ -88,16 +120,17 @@ npm run test:browser -- --workers=3
 The browser suite covers Chromium, Firefox, and WebKit and manages its own
 local development server. No test server needs to be started manually.
 
-The generated `dist/` directory can be served by a static web host. Static
-hosting does not require a plan-storage service.
+The generated `dist/` directory can be served by a static web host over HTTPS
+(or localhost for development). Static hosting does not require a plan-storage
+service.
 
 ## Roadmap
 
-Phase 1, the schematic planner, is implemented. Later phases add:
+Phases 1 and 2, the schematic planner and browser-local plan library with JSON
+import/export, are implemented. Later phases add:
 
-1. IndexedDB storage and JSON import/export.
-2. Standalone printable HTML and browser Save as PDF.
-3. Stitch ancestry and explicit increase techniques.
+- **Phase 3:** Standalone printable HTML and browser Save as PDF.
+- **Phase 4:** Stitch ancestry and explicit increase techniques.
 
 Gauge and physical tension/drape modeling are outside the roadmap.
 See [the implementation plan](docs/implementation-plan.md) for scope and

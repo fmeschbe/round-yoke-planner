@@ -1,5 +1,6 @@
 import './styles.css';
 import { Chart } from './chart';
+import { PlanLibrary } from './library';
 import { Preview } from './preview';
 import { calculate, createGeometry, PlanError, sameGeometry } from './yoke';
 import type { InputField } from './yoke';
@@ -16,9 +17,19 @@ const pattern = createPattern(createGeometry(calculate({ si: 64, ip: 8, sf: 160 
 const preview = new Preview(element('preview'), element('preview-description'), element('preview-mode'), pattern);
 const chart = new Chart(element('chart'), pattern, (round, column) => {
   if (!paint(pattern, round, column)) return;
+  library.markDirty();
   updateColors();
   element('status').textContent = `Updated round ${round}, column ${column + 1}.`;
 });
+const library = new PlanLibrary(pattern, () => {
+  const calculation = pattern.geometry.calculation;
+  for (const field of ['si', 'ip', 'sf'] as const) element<HTMLInputElement>(field).value = String(calculation[field]);
+  element<HTMLInputElement>('background').value = pattern.background;
+  clearErrors();
+  renderConfiguration();
+  renderPalette();
+}, () => (['si', 'ip', 'sf'] as const).some(field =>
+  Number(element<HTMLInputElement>(field).value) !== pattern.geometry.calculation[field]));
 
 function updateColors(): void {
   chart.updateColors();
@@ -81,6 +92,7 @@ function renderPalette(): void {
   clear.setAttribute('aria-label', 'Select clear');
   clear.setAttribute('aria-pressed', String(pattern.selected === null));
   clear.addEventListener('click', () => {
+    if (pattern.selected !== null) library.markDirty();
     pattern.selected = null;
     updateSelection();
   });
@@ -100,6 +112,7 @@ function renderPalette(): void {
     mark.textContent = String(index + 1);
     select.append(mark);
     select.addEventListener('click', () => {
+      if (pattern.selected !== color.id) library.markDirty();
       pattern.selected = color.id;
       updateSelection();
     });
@@ -108,6 +121,7 @@ function renderPalette(): void {
     edit.value = color.value;
     edit.setAttribute('aria-label', `Edit color ${index + 1}`);
     edit.addEventListener('input', () => {
+      if (color.value !== edit.value) library.markDirty();
       changeColor(pattern, color.id, edit.value);
       select.style.backgroundColor = edit.value;
       updateColors();
@@ -127,6 +141,7 @@ function renderPalette(): void {
     remove.append(icon);
     remove.addEventListener('click', () => {
       removeColor(pattern, color.id);
+      library.markDirty();
       renderPalette();
       updateColors();
       element<HTMLButtonElement>('add-color').focus();
@@ -157,6 +172,7 @@ function confirmGeometry(geometry: typeof pattern.geometry): boolean {
     return false;
   }
   applyGeometry(pattern, geometry);
+  library.markDirty();
   renderConfiguration();
   return true;
 }
@@ -198,10 +214,12 @@ visible.addEventListener('change', () => {
   }
   element('visible-error').textContent = '';
   pattern.visibleSegments = value;
+  library.markDirty();
   preview.render();
 });
 
 element('full-circle').addEventListener('click', () => {
+  if (pattern.visibleSegments !== pattern.geometry.segments) library.markDirty();
   pattern.visibleSegments = pattern.geometry.segments;
   visible.value = String(pattern.visibleSegments);
   element('visible-error').textContent = '';
@@ -210,14 +228,23 @@ element('full-circle').addEventListener('click', () => {
 
 element('add-color').addEventListener('click', () => {
   addColor(pattern, element<HTMLInputElement>('new-color').value);
+  library.markDirty();
   renderPalette();
   element('status').textContent = 'Color added and selected.';
 });
 
 element<HTMLInputElement>('background').addEventListener('input', event => {
-  pattern.background = (event.target as HTMLInputElement).value;
+  const value = (event.target as HTMLInputElement).value;
+  if (pattern.background !== value) library.markDirty();
+  pattern.background = value;
   updateColors();
 });
+form.addEventListener('input', () => library.markDirty());
 
+for (const field of ['si', 'ip', 'sf'] as const) {
+  element<HTMLInputElement>(field).value = String(pattern.geometry.calculation[field]);
+}
+element<HTMLInputElement>('background').value = pattern.background;
 renderConfiguration();
 renderPalette();
+void library.initialize();

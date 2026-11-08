@@ -342,7 +342,7 @@ test('places collapsible instructions above each view without affecting the patt
   }
 });
 
-test('uses no remote runtime assets or persistent plan storage', async ({ page, baseURL }) => {
+test('uses no remote runtime assets and does not autosave unsaved work', async ({ page, baseURL }) => {
   const external: string[] = [];
   page.on('request', request => {
     if (!request.url().startsWith(baseURL!) && !request.url().startsWith('data:')) external.push(request.url());
@@ -355,6 +355,7 @@ test('uses no remote runtime assets or persistent plan storage', async ({ page, 
   expect(layout.chartLeft).toBeGreaterThan(layout.previewRight);
   await addColor(page);
   await cell(page, 1, 1).click();
+  page.once('dialog', dialog => dialog.accept());
   await page.reload();
   await expect(page.locator('#palette-colors .palette-row')).toHaveCount(0);
   await expect(cell(page, 1, 1)).toHaveAttribute('aria-pressed', 'false');
