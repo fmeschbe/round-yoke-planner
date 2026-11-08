@@ -115,8 +115,16 @@ function renderPalette(): void {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'remove-color';
-    remove.textContent = 'Remove';
     remove.setAttribute('aria-label', `Remove color ${index + 1}`);
+    remove.title = `Remove color ${index + 1}`;
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('focusable', 'false');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7');
+    icon.append(path);
+    remove.append(icon);
     remove.addEventListener('click', () => {
       removeColor(pattern, color.id);
       renderPalette();

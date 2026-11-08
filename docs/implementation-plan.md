@@ -35,9 +35,10 @@ Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 25 Vitest cases, 11 browser acceptance cases in each
-of Chromium, Firefox, and WebKit (33 total), TypeScript checking, production
-build, and visual inspection of desktop/full-circle and mobile/sector layouts.
+Verification completed: 29 Vitest cases, the 42-case browser acceptance suite,
+and 12 targeted browser checks after adding schematic stitch highlights,
+TypeScript checking, production build, and visual inspection of
+desktop/full-circle and mobile/sector layouts.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -155,10 +156,15 @@ For a selected segment count S:
   columns; when n equals W every column is active.
 - Store colors by stable `(round, column)` coordinates within the current
   geometry. Precompute active columns for chart rendering and preview lookup.
-- Row 1 appears at the bottom of the chart, with stitch columns increasing
+- Row 1 appears at the top of the chart, with stitch columns increasing
   left to right. Preview row 1 sits next to the inner edge.
 - Disabled slots represent no stitch, not uncolored stitches. They never
   consume palette colors or appear as extra stitches in the preview.
+- On increase rounds, mark exactly `2 * IP / S` active cells with a 2px border.
+  Project the previous row's stitch centers into the new row's stitch indices;
+  the remaining indices are representative added stitches. Use SI for the
+  previous count when the first round is already an increase. These markings
+  are schematic, not ancestry-based, and remain visible when coloring/clearing.
 - Real uncolored stitches use the user-defined background color, initially
   white. This replaces the ambiguous "markee color" rule with an explicit
   background setting, separate from the clear tool.
@@ -210,6 +216,11 @@ when space allows. At narrow widths, place the palette below the chart and
 stack editor sections as needed. Keep charts scrollable rather than compressing
 stitches into unusable targets.
 
+Instructions sit above each chart/preview in initially open, collapsible
+panels. Palette deletion uses an accessible trash icon beside the color and
+its editing control, not a separate text row. Chart arrow-key movement follows
+the displayed order: Down moves to the next round and Up to the previous round.
+
 Use semantic table cells, labeled palette controls, visible focus, and a roving
 tab stop with arrow-key chart navigation. Space/Enter performs the same action
 as clicking. Distinguish disabled slots and clear/background colors without
@@ -220,6 +231,11 @@ relying exclusively on color.
 Render an annular sector with angular span `2 * pi * visibleSegments / S`.
 Repeat the edited segment across that span. Real stitches divide each round
 uniformly by angle, and their colors come from the row's active chart slots.
+
+Center the complete visible sector span at 6 o'clock, with starting angle
+`pi - span / 2`. Apply that rotation to vector stitches, increase overlays,
+sector bounds, and inverse-polar raster lookup alike. Full-circle orientation
+remains unchanged.
 
 Normalize outer radius to the viewport and set inner radius to
 `outerRadius * SI / SF`. Divide the radial band into TR row bands. This

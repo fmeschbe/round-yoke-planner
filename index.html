@@ -70,10 +70,14 @@
             <button id="full-circle" type="button">Full circle</button>
           </div>
           <p id="visible-error" class="error" role="alert"></p>
+          <details id="preview-instructions" class="instructions" open>
+            <summary>Preview instructions</summary>
+            <p class="hint">Visible segments are centered at 6 o'clock. Row 1 begins at the inner edge.
+              Uncolored stitches use the background; colors repeat in every segment.
+              Dashed marks show increase points.</p>
+            <p id="preview-description" class="hint"></p>
+          </details>
           <div id="preview"></div>
-          <p id="preview-description" class="hint"></p>
-          <p class="hint">Row 1 begins at the inner edge. Uncolored stitches use the background;
-            colors repeat in every segment. Dashed marks show increase points.</p>
         </section>
 
         <section class="chart-panel panel" aria-labelledby="chart-heading">
@@ -87,11 +91,15 @@
             </label>
             <p id="segment-description" class="hint"></p>
           </div>
+          <details id="chart-instructions" class="instructions" open>
+            <summary>Chart instructions</summary>
+            <p class="hint">Round 1 is at the top; read down through the rounds. Hatched slots have no stitch.
+              Dashed marks indicate increase points. Thicker borders mark schematic added stitches,
+              not exact stitch ancestry. Use arrow keys to move, Space or Enter to paint.</p>
+          </details>
           <div class="chart-and-palette">
             <div class="chart-area">
               <div id="chart" class="chart-scroll" role="region" aria-label="Scrollable stitch chart"></div>
-              <p class="hint">Read from the bottom up. Hatched slots have no stitch.
-                Dashed marks indicate increases. Use arrow keys to move, Space or Enter to paint.</p>
             </div>
             <aside class="palette" aria-labelledby="palette-heading">
               <h3 id="palette-heading">Your colors</h3>

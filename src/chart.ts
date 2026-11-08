@@ -27,7 +27,7 @@ export class Chart {
     }
     const table = document.createElement('table');
     const caption = table.createCaption();
-    caption.textContent = `One repeating segment: ${geometry.width} columns, ${geometry.rows.length} rounds. Row 1 is at the bottom.`;
+    caption.textContent = `One repeating segment: ${geometry.width} columns, ${geometry.rows.length} rounds. Row 1 is at the top.`;
     caption.className = 'sr-only';
     const head = table.createTHead().insertRow();
     const corner = document.createElement('th');
@@ -41,7 +41,7 @@ export class Chart {
       head.append(th);
     }
     const body = table.createTBody();
-    for (const row of [...geometry.rows].reverse()) {
+    for (const row of geometry.rows) {
       const tr = body.insertRow();
       tr.dataset.round = String(row.round);
       tr.classList.toggle('increase-row', row.increase);
@@ -58,6 +58,7 @@ export class Chart {
       }
       tr.append(label);
       const active = new Set(row.columns);
+      const added = new Set(row.addedColumns);
       const markers = new Set<number>();
       if (row.increase) {
         const count = Math.ceil(geometry.calculation.ip / geometry.segments);
@@ -74,6 +75,7 @@ export class Chart {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'stitch';
+        button.classList.toggle('added-stitch', added.has(column));
         button.dataset.round = String(row.round);
         button.dataset.column = String(column);
         button.disabled = !active.has(column);
@@ -104,11 +106,12 @@ export class Chart {
       const column = Number(button.dataset.column);
       const id = this.pattern.cells.get(key);
       const color = colorAt(this.pattern, round, column);
+      const addition = button.classList.contains('added-stitch') ? '; schematic added stitch' : '';
       button.style.backgroundColor = color;
       button.classList.toggle('colored', id !== undefined);
-      button.setAttribute('aria-label', `Round ${round}, column ${column + 1}: ${id ? `color ${color}` : 'uncolored stitch'}`);
+      button.setAttribute('aria-label', `Round ${round}, column ${column + 1}: ${id ? `color ${color}` : 'uncolored stitch'}${addition}`);
       button.setAttribute('aria-pressed', String(id !== undefined));
-      button.title = `Round ${round}, column ${column + 1}: ${id ? color : 'uncolored'}`;
+      button.title = `Round ${round}, column ${column + 1}: ${id ? color : 'uncolored'}${addition}`;
     }
   }
 
@@ -129,8 +132,8 @@ export class Chart {
     const { rows } = this.pattern.geometry;
     let round = Number(button.dataset.round);
     let column = Number(button.dataset.column);
-    if (event.key === 'ArrowUp') round = Math.min(rows.length, round + 1);
-    if (event.key === 'ArrowDown') round = Math.max(1, round - 1);
+    if (event.key === 'ArrowUp') round = Math.max(1, round - 1);
+    if (event.key === 'ArrowDown') round = Math.min(rows.length, round + 1);
     const columns = rows[round - 1].columns;
     if (event.key === 'Home') column = columns[0];
     else if (event.key === 'End') column = columns.at(-1)!;

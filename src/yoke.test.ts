@@ -91,6 +91,29 @@ describe('segment and slot layout', () => {
     expect(isActive(geometry, 3, 0)).toBe(false);
   });
 
+  it.each([
+    { si: 64, ip: 8, sf: 160 },
+    { si: 8, ip: 2, sf: 16 },
+    { si: 4, ip: 4, sf: 20 },
+  ])('marks exactly the added stitch count, including first-round increases: %j', inputs => {
+    const calculation = calculate(inputs);
+    for (const { count: segments, feasible } of calculation.segmentOptions) {
+      if (!feasible) continue;
+      for (const row of createGeometry(calculation, segments).rows) {
+        expect(row.addedColumns).toHaveLength(row.increase ? 2 * inputs.ip / segments : 0);
+        expect(new Set(row.addedColumns).size).toBe(row.addedColumns.length);
+        expect(row.addedColumns.every(column => row.columns.includes(column))).toBe(true);
+      }
+    }
+  });
+
+  it('keeps the inherited center and marks the flanking schematic additions', () => {
+    const geometry = createGeometry(calculate({ si: 4, ip: 4, sf: 20 }), 4);
+    expect(geometry.rows[1].columns).toEqual([0, 2, 4]);
+    expect(geometry.rows[1].addedColumns).toEqual([0, 4]);
+    expect(geometry.rows[3].addedColumns).toEqual([1, 3]);
+  });
+
   it('factors large smooth integers without scanning their square root', () => {
     expect(divisors(2 ** 40)).toEqual(Array.from({ length: 41 }, (_, index) => 2 ** index));
   });

@@ -51,6 +51,7 @@ details { font-size: .8rem; border-top: 1px solid var(--border); padding-top: 12
 summary { cursor: pointer; font-weight: 600; }
 details ul { padding-left: 18px; margin-bottom: 0; }
 details li { margin-top: 7px; }
+.instructions { margin-bottom: 16px; }
 .editor { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(0, 1.4fr); gap: 24px; align-items: start; }
 .section-heading { margin-bottom: 16px; align-items: start; }
 .section-heading h2 { margin-bottom: 0; }
@@ -71,6 +72,7 @@ thead th { position: sticky; top: 0; z-index: 3; background: #f0f1ea; }
 tbody th { position: sticky; left: 0; z-index: 2; background: #f0f1ea; padding: 0 6px; white-space: nowrap; }
 td { padding: 0; position: relative; }
 .stitch { display: block; width: 26px; height: 26px; padding: 0; border: 1px solid #aeb8ab; border-radius: 3px; }
+.stitch.added-stitch { border: 2px solid var(--accent); }
 .stitch:focus-visible { outline-offset: 0; position: relative; z-index: 4; }
 .stitch:not(.colored):not(:disabled)::after { content: ""; display: block; width: 3px; height: 3px; background: #647569; border-radius: 50%; margin: auto; }
 .no-stitch .stitch { opacity: 1; border: 1px solid #d1d6cb; background: repeating-linear-gradient(135deg, #e6e9de, #e6e9de 3px, #d6dccd 3px, #d6dccd 4px); }
@@ -82,9 +84,10 @@ td { padding: 0; position: relative; }
 .swatch[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
 .clear-swatch { width: 100%; height: 34px; background: repeating-linear-gradient(135deg, #fffefa, #fffefa 7px, #e7e9e0 7px, #e7e9e0 8px); }
 .swatch-number { display: inline-block; font-size: .65rem; background: #fff; color: #263b35; border-radius: 3px; padding: 0 4px; }
-.palette-row { display: grid; grid-template-columns: 38px 30px; gap: 7px; align-items: center; }
+.palette-row { display: grid; grid-template-columns: 38px 30px 30px; gap: 7px; align-items: center; }
 .palette-row input[type="color"] { width: 30px; height: 30px; margin: 0; }
-.remove-color { grid-column: 1 / -1; border: 0; padding: 0 2px; text-align: left; font-weight: 400; color: var(--muted); font-size: .7rem; }
+.remove-color { display: grid; place-items: center; width: 30px; height: 34px; padding: 4px; border: 0; color: var(--muted); }
+.remove-color svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .add-color { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 14px 0; margin: 16px 0; }
 .add-color button { margin-top: 8px; width: 100%; padding: 7px 8px; }
 footer { text-align: center; font-size: .75rem; color: var(--muted); padding: 24px 0 0; }

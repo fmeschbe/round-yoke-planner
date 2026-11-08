@@ -32,9 +32,11 @@ interface Bounds {
   height: number;
 }
 
-function sectorBounds(inner: number, span: number): Bounds {
-  const angles = [0, span];
-  for (let angle = Math.PI / 2; angle < span; angle += Math.PI / 2) angles.push(angle);
+function sectorBounds(inner: number, start: number, end: number): Bounds {
+  const angles = [start, end];
+  for (let angle = Math.ceil(start / (Math.PI / 2)) * Math.PI / 2; angle < end; angle += Math.PI / 2) {
+    angles.push(angle);
+  }
   const xs = angles.flatMap(angle => [inner * Math.sin(angle), RADIUS * Math.sin(angle)]);
   const ys = angles.flatMap(angle => [-inner * Math.cos(angle), -RADIUS * Math.cos(angle)]);
   const x = Math.min(...xs);
@@ -50,6 +52,7 @@ export class Preview {
   private paths: { path: SVGPathElement; round: number; column: number }[] = [];
   private bounds?: Bounds;
   private inner = 0;
+  private start = 0;
 
   constructor(
     private container: HTMLElement,
@@ -91,7 +94,8 @@ export class Preview {
     this.inner = RADIUS * geometry.calculation.si / geometry.calculation.sf;
     const span = TAU * visibleSegments / geometry.segments;
     const sector = TAU / geometry.segments;
-    this.bounds = sectorBounds(this.inner, span);
+    this.start = Math.PI - span / 2;
+    this.bounds = sectorBounds(this.inner, this.start, this.start + span);
     const { x, y, width, height } = this.bounds;
     const padding = Math.max(width, height) * 0.06;
     this.svg = svgElement('svg', {
@@ -119,8 +123,8 @@ export class Preview {
         const inner = this.inner + (row.round - 1) * step;
         for (let repeat = 0; repeat < visibleSegments; repeat++) {
           row.columns.forEach((column, index) => {
-            const start = repeat * sector + index / row.columns.length * sector;
-            const end = repeat * sector + (index + 1) / row.columns.length * sector;
+            const start = this.start + repeat * sector + index / row.columns.length * sector;
+            const end = this.start + repeat * sector + (index + 1) / row.columns.length * sector;
             const path = svgElement('path', {
               d: annularPath(inner, inner + step, start, end),
               'data-round': row.round, 'data-column': column,
@@ -144,12 +148,12 @@ export class Preview {
       const inner = this.inner + (row.round - 1) * step;
       if (denseMarkers) {
         markers.append(svgElement('path', {
-          d: annularPath(inner, inner + step, 0, span),
+          d: annularPath(inner, inner + step, this.start, this.start + span),
           'data-dense-increases': 'true',
         }));
       } else {
         for (let k = 0; k < perRound; k++) {
-          const angle = k / geometry.calculation.ip * TAU;
+          const angle = this.start + k / geometry.calculation.ip * TAU;
           markers.append(svgElement('path', {
             d: `M ${point(inner, angle)} L ${point(inner + step, angle)}`,
             'data-increase-round': row.round,
@@ -188,8 +192,7 @@ export class Preview {
         const py = bounds.y + (y + 0.5) / canvas.height * bounds.height;
         const radius = Math.hypot(px, py);
         if (radius < this.inner || radius >= RADIUS) continue;
-        let angle = Math.atan2(px, -py);
-        if (angle < 0) angle += TAU;
+        const angle = (Math.atan2(px, -py) - this.start + TAU) % TAU;
         if (angle >= span) continue;
         const roundIndex = Math.min(colors.length - 1, Math.floor((radius - this.inner) / step));
         const rowColors = colors[roundIndex];

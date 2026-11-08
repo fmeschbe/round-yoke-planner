@@ -35,8 +35,9 @@ Clicking a stitch with the same selected color clears it; another selected
 color replaces it. The **Clear** tool removes a stitch's color. Editing a
 palette color updates all its stitches; removing it clears those stitches.
 
-Read chart rounds from the bottom up. Hatched slots have no stitch and cannot
-be painted. Dashed marks indicate schematic increase points. Arrow keys move
+Round 1 is at the top of the chart; read down through the rounds. Hatched slots
+have no stitch and cannot be painted. Dashed marks indicate schematic increase
+points; thicker borders mark schematic added stitches on increase rounds. Arrow keys move
 between real stitches, Home/End move to the ends of a row, and Space/Enter paints.
 
 Changing the applied inputs or repeating-segment count asks for confirmation
@@ -65,6 +66,8 @@ rounds spaced four rounds apart.
 
 The preview and fixed chart slots are schematic. They do not model stitch
 ancestry, a specific increase technique, gauge, tension, or physical drape.
+Visible preview sectors are centered at 6 o'clock. Instructions above both
+views can be collapsed to leave more room for the pattern.
 
 ## Development
 

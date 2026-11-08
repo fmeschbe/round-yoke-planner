@@ -26,6 +26,7 @@ export interface Row {
   stitches: number;
   columns: number[];
   increase: boolean;
+  addedColumns: number[];
 }
 
 export interface Geometry {
@@ -114,7 +115,17 @@ export function createGeometry(calculation: Calculation, segments: number): Geom
     const stitches = calculation.si + 2 * calculation.ip * Math.floor(round / calculation.interval);
     const count = stitches / segments;
     const columns = Array.from({ length: count }, (_, j) => Math.floor((j + 0.5) * width / count));
-    rows.push({ round, stitches, columns, increase: round % calculation.interval === 0 });
+    const increase = round % calculation.interval === 0;
+    let addedColumns: number[] = [];
+    if (increase) {
+      const previousCount = (stitches - 2 * calculation.ip) / segments;
+      // Project previous stitch centers into the new row; the remaining slots are schematic additions.
+      const inherited = new Set(Array.from(
+        { length: previousCount }, (_, j) => Math.floor((j + 0.5) * count / previousCount),
+      ));
+      addedColumns = columns.filter((_, index) => !inherited.has(index));
+    }
+    rows.push({ round, stitches, columns, increase, addedColumns });
   }
   return { calculation, segments, width, rows };
 }

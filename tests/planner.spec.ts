@@ -38,7 +38,10 @@ test('calculates rounds, filters segments, and only allows real stitch cells', a
   await expect(page.locator('#segments option')).toHaveText(['1 segment', '2 segments', '4 segments']);
   await page.locator('#segments').selectOption('4');
   await expect(page.locator('#chart-size')).toHaveText('4 columns x 2 rounds');
-  await expect(page.locator('#chart tbody tr').first()).toHaveAttribute('data-round', '2');
+  await expect(page.locator('#chart tbody tr').first()).toHaveAttribute('data-round', '1');
+  await expect(page.locator('#chart tbody tr').last()).toHaveAttribute('data-round', '2');
+  expect(await cell(page, 1, 0).evaluate(button => button.getBoundingClientRect().top))
+    .toBeLessThan(await cell(page, 2, 0).evaluate(button => button.getBoundingClientRect().top));
   await expect(cell(page, 1, 1)).toBeDisabled();
   await expect(cell(page, 1, 0)).toBeEnabled();
   await expect(page.locator('#chart .increase-row')).toHaveCount(2);
@@ -75,7 +78,18 @@ test('editing and removing palette colors updates existing stitches', async ({ p
   await setColor(page.getByLabel('Edit color 1', { exact: true }), '#123456');
   await expect(previewCell(page, 1, 0)).toHaveAttribute('fill', '#123456');
   await expect(previewCell(page, 2, 0)).toHaveAttribute('fill', '#123456');
-  await page.getByRole('button', { name: 'Remove color 1', exact: true }).click();
+  const remove = page.getByRole('button', { name: 'Remove color 1', exact: true });
+  await expect(remove).toHaveText('');
+  await expect(remove.locator('svg')).toHaveCount(1);
+  const centers = await page.locator('.palette-row').evaluate(row => {
+    return [...row.querySelectorAll('button, input')].map(control => {
+      const rect = control.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    });
+  });
+  expect(centers[0]).toBeCloseTo(centers[1], 1);
+  expect(centers[0]).toBeCloseTo(centers[2], 1);
+  await remove.click();
   await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'false');
   await expect(cell(page, 2, 0)).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: 'Select clear', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -117,12 +131,14 @@ test('uses keyboard navigation that skips inactive cells', async ({ page }) => {
   await expect(cell(page, 1, 2)).toBeFocused();
   await page.keyboard.press('Space');
   await expect(cell(page, 1, 2)).toHaveAttribute('aria-pressed', 'true');
-  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowDown');
   await expect(cell(page, 2, 2)).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(cell(page, 2, 2)).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Home');
   await expect(cell(page, 2, 0)).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(cell(page, 1, 0)).toBeFocused();
 });
 
 test('supports zero rows, oversized-chart feedback and fallback segment selection', async ({ page }) => {
@@ -218,7 +234,112 @@ test('shows increase markers only on increase rounds and preserves annular orien
       return Math.hypot(Number(coordinates[1]), Number(coordinates[2]));
     });
   });
-  expect(radii).toEqual([150, 200]);
+  expect(radii[0]).toBeCloseTo(150);
+  expect(radii[1]).toBeCloseTo(200);
+});
+
+test('marks schematic added stitches with thicker borders only on increase rounds', async ({ page }) => {
+  await calculate(page, '64', '8', '96');
+  await expect(page.locator('#chart tr[data-round="4"] .added-stitch')).toHaveCount(16);
+  await expect(page.locator('#chart tr[data-round="8"] .added-stitch')).toHaveCount(16);
+  await expect(page.locator('#chart tr[data-round="1"] .added-stitch')).toHaveCount(0);
+  await expect(page.locator('#chart .no-stitch .added-stitch')).toHaveCount(0);
+  await page.locator('#segments').selectOption('8');
+  await expect(page.locator('#chart tr[data-round="4"] .added-stitch')).toHaveCount(2);
+  await expect(page.locator('#chart tr[data-round="8"] .added-stitch')).toHaveCount(2);
+  const added = page.locator('#chart .added-stitch').first();
+  await expect(added).toHaveCSS('border-top-width', '2px');
+  await expect(added).toHaveCSS('width', '26px');
+  await expect(added).toHaveAttribute('title', /schematic added stitch/);
+  await addColor(page);
+  await added.click();
+  await expect(added).toHaveAttribute('aria-pressed', 'true');
+  await expect(added).toHaveAttribute('aria-label', /schematic added stitch/);
+  await added.click();
+  await expect(added).toHaveAttribute('aria-pressed', 'false');
+  await expect(added).toHaveCSS('border-top-width', '2px');
+  await expect(page.locator('#chart-instructions')).toContainText('Thicker borders mark schematic added stitches');
+});
+
+test('centers one or multiple visible sectors at six oclock', async ({ page }) => {
+  await calculate(page, '8', '2', '16');
+  await page.locator('#segments').selectOption('4');
+  for (const visible of [1, 2, 3]) {
+    await page.locator('#visible-segments').fill(String(visible));
+    await page.locator('#visible-segments').blur();
+    const geometry = await page.locator('#preview svg').evaluate(svg => {
+      const paths = [...svg.querySelectorAll('.preview-stitches path[data-round="2"]')];
+      const first = paths[0].getAttribute('d')!.split(' ').map(Number);
+      const last = paths.at(-1)!.getAttribute('d')!.split(' ').map(Number);
+      const start = Math.atan2(first[1], -first[2]);
+      const end = Math.atan2(last[17], -last[18]) + Math.PI * 2;
+      const bounds = (svg.querySelector('.preview-stitches') as SVGGraphicsElement).getBBox();
+      return {
+        midpoint: (start + end) / 2,
+        centerX: bounds.x + bounds.width / 2,
+        bottom: bounds.y + bounds.height,
+      };
+    });
+    expect(geometry.midpoint).toBeCloseTo(Math.PI);
+    expect(geometry.centerX).toBeCloseTo(0);
+    expect(geometry.bottom).toBeCloseTo(200);
+  }
+});
+
+test('centers dense partial previews and their increase markers consistently', async ({ page }) => {
+  await calculate(page, '1000', '2', '1040');
+  await expect(page.locator('#segments')).toHaveValue('4');
+  await addColor(page, '#ff0000');
+  await cell(page, 10, 259).click();
+  await page.locator('#visible-segments').fill('2');
+  await page.locator('#visible-segments').blur();
+  await expect(page.locator('#preview svg')).toHaveAttribute('data-renderer', 'raster');
+  const geometry = await page.locator('#preview image').evaluate(async image => {
+    const source = new Image();
+    source.src = image.getAttribute('href')!;
+    await source.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = source.width;
+    canvas.height = source.height;
+    const context = canvas.getContext('2d')!;
+    context.drawImage(source, 0, 0);
+    return {
+      x: Number(image.getAttribute('x')),
+      y: Number(image.getAttribute('y')),
+      width: Number(image.getAttribute('width')),
+      height: Number(image.getAttribute('height')),
+      bottom: [...context.getImageData(Math.floor(source.width / 2), source.height - 1, 1, 1).data],
+      center: [...context.getImageData(Math.floor(source.width / 2), Math.floor(source.height / 2), 1, 1).data],
+    };
+  });
+  expect(geometry.x).toBeCloseTo(-200);
+  expect(geometry.y).toBeCloseTo(0);
+  expect(geometry.width).toBeCloseTo(400);
+  expect(geometry.height).toBeCloseTo(200);
+  expect(geometry.bottom).toEqual([255, 0, 0, 255]);
+  expect(geometry.center[3]).toBe(0);
+  const marker = await page.locator('#preview path[data-increase-round="10"]').getAttribute('d');
+  const coordinates = marker!.split(' ');
+  expect(Number(coordinates[1])).toBeGreaterThan(0);
+  expect(Number(coordinates[2])).toBeCloseTo(0);
+});
+
+test('places collapsible instructions above each view without affecting the pattern', async ({ page }) => {
+  await addColor(page);
+  await cell(page, 1, 1).click();
+  for (const view of ['chart', 'preview']) {
+    const instructions = page.locator(`#${view}-instructions`);
+    const text = instructions.locator('p').first();
+    await expect(text).toBeVisible();
+    expect(await instructions.evaluate(element => element.getBoundingClientRect().bottom))
+      .toBeLessThanOrEqual(await page.locator(`#${view}`).evaluate(element => element.getBoundingClientRect().top));
+    await instructions.locator('summary').click();
+    await expect(text).toBeHidden();
+    await expect(page.locator(`#${view}`)).toBeVisible();
+    await expect(cell(page, 1, 1)).toHaveAttribute('aria-pressed', 'true');
+    await instructions.locator('summary').click();
+    await expect(text).toBeVisible();
+  }
 });
 
 test('uses no remote runtime assets or persistent plan storage', async ({ page, baseURL }) => {
