@@ -27,25 +27,32 @@ The project uses Apache License 2.0; `README.md` provides setup, usage, and
 development instructions. Local Git uses `main` and the GitHub repository as
 `origin`.
 
-**Phases 1 and 2 are complete.** Calculator validation, fixed-slot repeating chart,
+**Phases 1–3 are complete.** Calculator validation, fixed-slot repeating chart,
 palette, confirmed geometry resets, keyboard navigation, responsive layout,
 and SVG/dense annular previews are implemented. The six Phase 1 implementation
 todos below, the Phase 2 local-portability todo, and English/German/Bokmål localization
-are complete; Phases 3 and 4 remain pending. Phases 1 and 2, including modal plan
+and printable HTML are complete; Phase 4 remains pending. Phases 1 and 2, including modal plan
 management and collapsed instructions, were pushed through `529728b`.
 English/German/Bokmål localization and the flag-only selector were committed
 as `0229173`. Guided stitch selections are also implemented, and these
-refinements are published. Phase 3 is the next roadmap step.
+refinements are published through `ba15450`. Phase 3 is implemented locally;
+its changes have not been pushed. Phase 4 requires confirmation of the ancestry
+contract before implementation.
 
 Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 51 Vitest cases and 123 browser acceptance checks across
+Verification completed: 54 Vitest cases and 148 browser acceptance checks across
 Chromium, Firefox, and WebKit. Coverage includes cascading stitch selections,
 explicit Apply/reset confirmation, legacy-plan restoration, language switching,
-and existing planner/library workflows. TypeScript checking, production build,
-and desktop/mobile layout inspection also passed.
+and existing planner/library workflows. Print coverage includes offline localized
+documents, literal user text, dense previews, panel boundaries, zero rounds,
+draft/popup errors, isolated print tabs, and A4/US Letter PDF output in Chromium.
+Two PDF-generation checks are skipped because Playwright does not expose that
+API for Firefox/WebKit; both engines exercise print styles and the native button.
+TypeScript checking, production build, desktop/mobile layout inspection, and
+representative printed chart inspection also passed.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -465,12 +472,24 @@ useful as well. Split large charts into numbered panels with repeated row/
 column labels and assembly guidance rather than shrinking cells beyond
 readability. Do not split individual chart rows unintentionally.
 
-Proposed addition: `src/print.ts` for snapshot-to-document generation and
-print-specific styles. Prefer existing SVG preview geometry; embed a bounded
-raster image when the dense-rendering path is necessary.
+Implemented in `src/print.ts`, integrated into the current-plan controls in
+`src/library.ts`. Download printable HTML or open an isolated print tab; neither
+saves the plan. Reject unapplied calculator drafts, and provide download guidance
+if the browser blocks pop-ups. Reuse the SVG preview with an explicit locale;
+embed a bounded data-PNG for dense previews. All document copy is translated
+into English, German, and Bokmål; user data remains unchanged.
+
+Confirmed layout: portrait A4/US Letter-compatible panels, at most 40 columns
+by 40 rounds, with 4 mm cells. Print each panel on a separate page, ordered
+left-to-right within a round band and then top-to-bottom through round bands.
+Repeat global row/column labels and include assembly guidance. Use 12 mm page
+margins, 100% scale, background graphics, and no browser headers/footers.
+Overview and long schedules can paginate naturally with repeated table headers.
+Standalone documents include an inline native Print / Save as PDF button,
+embedded styles/assets, escaped text, and a restrictive content security policy.
 
 Acceptance: downloaded HTML opens without network access, content matches the
-saved plan, user text renders literally, charts remain legible across page
+current applied plan, user text renders literally, charts remain legible across page
 breaks, and print preview works in Chromium, Firefox, and WebKit.
 Browser PDF output is included; a dedicated PDF-generation dependency and
 Markdown export are not part of the committed phase scope.

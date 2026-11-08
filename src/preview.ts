@@ -2,6 +2,7 @@ import { colorAt } from './pattern';
 import type { Pattern } from './pattern';
 import type { Geometry } from './yoke';
 import { t } from './i18n';
+import type { Language } from './i18n';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const TAU = Math.PI * 2;
@@ -60,14 +61,15 @@ export class Preview {
     private description: HTMLElement,
     private mode: HTMLElement,
     private pattern: Pattern,
+    private locale?: Language,
   ) {}
 
   render(): void {
     const { geometry, visibleSegments } = this.pattern;
     if (!geometry.rows.length) {
-      this.container.textContent = t('No rounds to preview.');
-      this.description.textContent = t('Initial and final stitches are equal.');
-      this.mode.textContent = t('No rounds');
+      this.container.textContent = t('No rounds to preview.', {}, this.locale);
+      this.description.textContent = t('Initial and final stitches are equal.', {}, this.locale);
+      this.mode.textContent = t('No rounds', {}, this.locale);
       this.geometry = undefined;
       this.svg = undefined;
       this.paths = [];
@@ -82,18 +84,18 @@ export class Preview {
 
   private updateLabels(): void {
     const { geometry, visibleSegments } = this.pattern;
-    this.svg!.querySelector('title')!.textContent = t('Colored round-yoke preview');
+    this.svg!.querySelector('title')!.textContent = t('Colored round-yoke preview', {}, this.locale);
     let description = t('{visible} of {segments} repeating segments, {rounds} rounds, from {si} to {sf} stitches. Schematic, not physical knitting simulation.', {
       visible: visibleSegments, segments: geometry.segments, rounds: geometry.rows.length,
       si: geometry.calculation.si, sf: geometry.calculation.sf,
-    });
+    }, this.locale);
     if (Math.ceil(geometry.calculation.ip * visibleSegments / geometry.segments) * geometry.calculation.increases > MAX_MARKERS) {
-      description += t(' Increase points are densely spaced; dashed bands indicate increase rounds.');
+      description += t(' Increase points are densely spaced; dashed bands indicate increase rounds.', {}, this.locale);
     }
     this.svg!.querySelector('desc')!.textContent = description;
     this.description.textContent = description;
     this.mode.textContent = t(this.svg!.dataset.renderer === 'raster'
-      ? 'Dense preview' : visibleSegments === geometry.segments ? 'Full circle' : 'Sector');
+      ? 'Dense preview' : visibleSegments === geometry.segments ? 'Full circle' : 'Sector', {}, this.locale);
   }
 
   updateColors(): void {

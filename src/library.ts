@@ -10,6 +10,7 @@ import { calculate, createGeometry } from './yoke';
 import { DEFAULT_INPUTS } from './calculator';
 import { copyText, errorText, LocalizedError, onLanguageChange, setText, t } from './i18n';
 import type { Message, Parameters } from './i18n';
+import { printableHTML } from './print';
 
 function element<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -60,6 +61,8 @@ export class PlanLibrary {
       this.dialog.close();
     });
     element('export-plan').addEventListener('click', () => void this.action(() => this.export()));
+    element('export-html').addEventListener('click', () => void this.action(() => this.printable(false)));
+    element('print-plan').addEventListener('click', () => void this.action(() => this.printable(true)));
     element('import-plan').addEventListener('click', () => element<HTMLInputElement>('import-file').click());
     element<HTMLInputElement>('import-file').addEventListener('change', event => {
       const input = event.target as HTMLInputElement;
@@ -107,7 +110,7 @@ export class PlanLibrary {
     setText(element('plan-status'), this.dirty
       ? 'Unsaved changes'
       : this.id ? 'Saved in this browser' : 'Browser only - not saved');
-    for (const id of ['save-plan', 'new-plan', 'export-plan', 'import-plan', 'import-file']) {
+    for (const id of ['save-plan', 'new-plan', 'export-plan', 'export-html', 'print-plan', 'import-plan', 'import-file']) {
       element<HTMLButtonElement | HTMLInputElement>(id).disabled = this.busy;
     }
     this.saved.disabled = this.busy || !this.saved.options.length;
@@ -233,6 +236,30 @@ export class PlanLibrary {
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     this.message('Exported the current applied plan as JSON. Exporting does not save it in this browser.');
+  }
+
+  private printable(open: boolean): void {
+    const plan = this.snapshot();
+    const html = printableHTML(plan);
+    if (open) {
+      const view = window.open('about:blank', '_blank');
+      if (!view) throw new LocalizedError('Allow pop-ups to open the print view, or download printable HTML instead.');
+      view.opener = null;
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      view.location.replace(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      this.message('Opened the print view. Use Print / Save as PDF in the new tab.');
+    } else {
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${plan.name.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 80) || 'yoke-plan'}.html`;
+      this.dialog.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.message('Downloaded printable HTML for the current plan.');
+    }
   }
 
   private async import(file: File): Promise<void> {

@@ -101,6 +101,25 @@ temporary. Use **Request persistent storage** under the local-storage
 explanation to ask the browser to reduce eviction risk, but keep JSON backups
 even if permission is granted.
 
+### Printing and PDF
+
+Under **Your Plans**, select **Download printable HTML** for a standalone,
+offline document, or **Open print view** for a new tab. Both use the current
+applied plan and interface language without saving it. Apply any draft
+calculator changes first.
+
+The document includes the increase schedule, palette and background, repeated
+segment instructions, embedded preview, and numbered chart panels. Panels use
+**4 mm cells**, with at most **40 columns × 40 rounds**, repeated labels, and
+assembly guidance. Round 1 remains at the top; no-stitch cells, increase points,
+and schematic added-stitch borders remain distinguishable.
+
+Select **Print / Save as PDF** in the document. Choose portrait A4 or US Letter,
+100% scale, background graphics enabled, and browser headers/footers disabled.
+If pop-ups are blocked, allow them or download the HTML and open it locally.
+Keep JSON backups for editable plans; printable HTML is a reading/printing
+document, not an import format.
+
 ### Calculation rules
 
 - Inputs must be positive safe whole numbers; IP must be even and divide SI.
@@ -164,11 +183,9 @@ service.
 
 ## Roadmap
 
-Phases 1 and 2, the schematic planner and browser-local plan library with JSON
-import/export, are implemented. Later phases add:
-
-- **Phase 3:** Standalone printable HTML and browser Save as PDF.
-- **Phase 4:** Stitch ancestry and explicit increase techniques.
+Phases 1–3 are implemented: the schematic planner, browser-local library and
+JSON portability, and standalone printable HTML with browser Save as PDF.
+**Phase 4** adds stitch ancestry and explicit increase techniques.
 
 Gauge and physical tension/drape modeling are outside the roadmap.
 See [the implementation plan](docs/implementation-plan.md) for scope and

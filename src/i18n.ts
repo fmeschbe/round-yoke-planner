@@ -16,6 +16,10 @@ const listeners = new Set<() => void>();
 let staticText: { node: Text; source: string; key: Message }[] = [];
 let staticAttributes: { element: Element; attribute: string; key: Message }[] = [];
 
+export function getLanguage(): Language {
+  return language;
+}
+
 export function preferredLanguage(saved: string | null, browser: string): Language {
   if (saved && Object.hasOwn(catalogs, saved)) return saved as Language;
   if (/^(?:nb|no)(?:-|$)/i.test(browser)) return 'nb';
