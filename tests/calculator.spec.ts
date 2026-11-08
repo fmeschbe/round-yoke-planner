@@ -28,7 +28,7 @@ test('leads with increase presets and derives bounded, valid stitch selections',
 
 test('cascades to smallest valid choices without applying or discarding the current pattern', async ({ page }) => {
   await page.locator('#add-color').click();
-  const painted = page.locator('#chart button[data-round="1"][data-column="1"]');
+  const painted = page.locator('#chart button[data-round="1"][data-column="158"]');
   await painted.click();
   await page.locator('#si').selectOption('48');
   await expect(page.locator('#sf')).toHaveValue('112');

@@ -28,7 +28,7 @@ development instructions. Local Git uses `main` and the GitHub repository as
 `origin`.
 
 **Phases 1–3 are complete.** Calculator validation, fixed-slot repeating chart,
-palette, confirmed geometry resets, keyboard navigation, responsive layout,
+palette, color-preserving geometry edits, keyboard navigation, responsive layout,
 and SVG/dense annular previews are implemented. The six Phase 1 implementation
 todos below, the Phase 2 local-portability todo, and English/German/Bokmål localization
 and printable HTML are complete; Phase 4 remains pending. Phases 1 and 2, including modal plan
@@ -37,17 +37,19 @@ English/German/Bokmål localization and the flag-only selector were committed
 as `0229173`. Guided stitch selections are also implemented, and these
 refinements are published through `ba15450`. Phase 3 is committed locally as
 `a3e3c5b`, without pushing. Header save/print shortcuts are committed locally as
-`d42219f`, without pushing. The hamburger menu redesign is complete locally;
-publication remains pending. Phase 4 requires confirmation of the ancestry
+`d42219f`, without pushing. The hamburger menu redesign is committed as
+`4a03a28`, without pushing. Color-preserving geometry changes and optional
+initial/final plain rounds are committed locally without pushing.
+Phase 4 requires confirmation of the ancestry
 contract before implementation.
 
 Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 54 Vitest cases and 163 browser acceptance checks across
+Verification completed: 65 Vitest cases and 190 browser acceptance checks across
 Chromium, Firefox, and WebKit. Coverage includes cascading stitch selections,
-explicit Apply/reset confirmation, legacy-plan restoration, language switching,
+explicit Apply/color-loss confirmation, legacy-plan restoration, language switching,
 and existing planner/library workflows. Print coverage includes offline localized
 documents, literal user text, dense previews, panel boundaries, zero rounds,
 draft/popup errors, isolated print tabs, and A4/US Letter PDF output in Chromium.
@@ -59,6 +61,12 @@ Menu coverage includes keyboard navigation, lightweight dismissal, focused
 dialogs, Save-as copies/cancellation, active/inactive renaming, filesystem and
 drag/drop imports, and preservation of existing storage, localization, and
 print behavior.
+Resize coverage includes ordinal remapping, lossless growth/reduction, exact
+loss counts, cancellation, irreversible truncation, zero rounds, unchanged or
+growing rectangles with fewer real stitches, preview updates, and JSON round trips.
+Plain-round coverage includes independent increase timing, continuous/section
+numbering, edge-anchored remapping, exact truncation losses, equal-count previews,
+validation/budgets, localized drafts, persistence/New reset, and offline panels.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -105,11 +113,12 @@ acceptance criteria below describe Phase 1 unless stated otherwise.
 - Distribute actual stitch slots uniformly across chart width and show
   schematic, evenly distributed increase markers. Do not model stitch ancestry,
   a particular increase technique, gauge, or physical knit tension.
-- Confirm before clearing a nonempty pattern when a valid applied input or
-  segment-count change changes its geometry. Retain the palette. Changing only
+- Preserve colors by round and real-stitch ordinal when applied input or
+  segment-count changes alter geometry; confirm only actual color losses.
+  Retain the palette. Changing only
   the number of visible segments preserves the pattern.
 - Limit the rectangular chart to **5,000 slots**, including disabled slots:
-  `TR * (SF / segmentCount) <= 5000`.
+  `(initialRounds + TR + finalRounds) * (SF / segmentCount) <= 5000`.
 
 ## Proposed approach
 
@@ -126,7 +135,7 @@ Proposed files:
   entry, build, type checking, and test configuration.
 - `src/main.ts`: bootstrap, application state, action handlers, and coordination.
 - `src/yoke.ts`: validation, calculation, segment divisors, and row slot layout.
-- `src/pattern.ts`: palette IDs, cell edits, palette updates, and pattern reset.
+- `src/pattern.ts`: palette IDs, cell edits, palette updates, and geometry remapping.
 - `src/chart.ts`: accessible chart, increase overlays, and delegated events.
 - `src/preview.ts`: annular geometry, SVG rendering, and bounded dense rendering.
 - `src/styles.css`: responsive layout, palette, chart, focus, and disabled states.
@@ -141,15 +150,17 @@ not add a standalone linter or formatter without a demonstrated need.
 
 Let `K = IP / 2`, `D = 2 * IP`, and `M = (SF - SI) / D`.
 
-- Total rounds: `TR = M * K`.
-- Rows are numbered from 1 through TR; SI is the starting circumference, not
-  an extra chart row.
-- Stitches in round r: `N(r) = SI + D * floor(r / K)`.
-- Round r has increase markers when `r % K == 0`.
+- Increase-section rounds: `TR = M * K`.
+- Optional initial and final plain rounds default to zero and must be
+  nonnegative safe integers. Total chart rounds are `initialRounds + TR + finalRounds`.
+- Rows are numbered continuously from 1 through total chart rounds. Each row
+  also has a section and local section round, shown in compact translated labels.
+- Within the increase section, local round r has `N(r) = SI + D * floor(r / K)`.
+- Only increase-section round r has increase markers when `r % K == 0`.
 - The final round includes the final increase and has SF stitches. No trailing
-  rounds are added.
-- If SI equals SF, TR is zero: show a valid no-rounds result and an explanatory
-  empty chart/preview, not an invented row.
+  increase-section rounds are added. Initial/final plain rows use SI/SF stitches.
+- If SI equals SF, TR is zero. Optional plain rows remain valid; only zero
+  total chart rounds produce an empty chart/preview.
 - Guard computed values against unsafe-integer overflow before allocation.
 
 For a positive-round calculation, valid segment counts are the positive
@@ -223,7 +234,7 @@ existing calculator so a feasible chart must also exist.
 When an upstream selection changes, retain dependent values if they remain
 available; otherwise choose the smallest available value. Continue to require
 Calculate / Apply, preserve current pattern data until application, and keep
-the existing confirmation before clearing a colored pattern.
+confirmation only when applying would remove colored stitch positions.
 
 Saved and imported plans outside these UI presets/ranges remain supported by
 the unchanged document schema and validation rules. Add their current values
@@ -238,6 +249,61 @@ chart-budget exclusions, canceled Apply, legacy imports/reloads, and defaults.
 Older browser examples now enter through JSON import when outside the guided
 ranges rather than requiring freeform numeric entry.
 
+### Color-preserving geometry changes
+
+Preserve each assigned color's section round and zero-based ordinal among that
+round's real stitches. Find the ordinal in the old active-column array and map
+it into the new array for its corresponding section round. Do not preserve raw grid columns,
+scale fractional positions, or infer ancestry. This gives a unique mapping
+without collisions, while allowing left/right shifts as blocked slots change.
+
+The chart remains top-left anchored, adding/removing columns at the right.
+Increase-section and final rounds grow/shrink at their section's bottom;
+initial rounds grow/shrink at the top. New real stitches use the background. A removed round or
+missing target ordinal loses its assigned color; unused palette entries remain.
+Compute a candidate map and exact loss count before modifying applied state.
+Lossless changes require no confirmation, even if the rectangle shrinks.
+Actual losses require a localized confirmation with their count and a warning
+that later expansion cannot restore them. Cancel retains geometry and colors,
+restores a canceled segment selection, and leaves calculator drafts unapplied.
+
+Check actual per-round positions, not just rectangular dimensions: changing SI,
+IP, or segments can reduce real stitches inside an unchanged or growing chart.
+Keep existing calculation validation, the 5,000-slot budget, explicit Apply for
+calculator drafts, and immediate segment changes. Retain palette/background/
+selection and clamp visible segments. Rebuild chart/preview geometry and mark
+applied changes unsaved.
+
+Implemented with pure `remapCells` and `applyGeometry` in `src/pattern.ts`,
+integrated into `confirmGeometry` in `src/main.ts`. No JSON change is needed:
+stored cells still use current `(round, column)` coordinates, remapped at Apply.
+Imports, saving, and printable exports receive only current assignments; no
+hidden recovery history is stored. Backwards compatibility is not a constraint
+if future changes require a format revision.
+
+### Optional initial and final plain rounds
+
+Add two numeric draft controls, applied through Calculate / Apply. Initial
+rows have SI stitches and are inserted before the existing top row or removed
+from the top. Their colors preserve distance from the yoke boundary, rather
+than their local top-based number. Final rows have SF stitches, append/remove
+at the bottom, and preserve their local round number. Yoke rows preserve their
+increase-section round when initial rows are inserted/removed; final rows move
+with changes to either preceding section. Preserve real-stitch ordinals and
+confirm only actual losses using the existing exact-loss prompt.
+
+Global round numbers remain continuous while compact I/Y/F labels (localized)
+show section/local numbers separately. TR and increase cadence remain confined
+to the yoke section; plain rows have no increases or added-stitch borders.
+The 5,000-slot budget includes every section. Equal SI/SF permits plain-only
+charts; their preview uses explicitly arbitrary ring thickness.
+
+Persist/export `inputs.initialRounds` and `inputs.finalRounds` in document
+version 1; missing fields normalize to zero. Recompute global geometry on
+import. Print all global rows, section labels, total/section counts, and both
+global and local increase-round numbers, with existing panel and cell sizes.
+New plans reset both counts to zero. No recovery history or gauge is added.
+
 Palette entries have stable IDs; cells reference IDs rather than color strings.
 Initially only clear is available and selected. The clear tool cannot be
 removed and is not a stored stitch color.
@@ -251,10 +317,10 @@ removed and is not a stored stitch color.
 - Editing a color preserves its ID and updates all corresponding stitches.
 - Removing a color clears every referencing cell; if selected, select clear.
 - Background-color changes affect uncolored stitches, not disabled slots.
-- Confirmed geometry changes clear cell assignments, retain palette and
+- Geometry changes remap surviving cell assignments, retain palette and
   background, and clamp visible segment count to its new range.
 - Reapplying identical geometry or submitting invalid values preserves state.
-- Canceling a reset preserves applied geometry and restores segment controls.
+- Canceling color loss preserves applied geometry and restores segment controls.
 
 Show input labels, field-level errors, the calculated TR, stitch counts,
 increase cadence, and the confirmed assumptions above the editor. Use a
@@ -287,7 +353,8 @@ sector bounds, and inverse-polar raster lookup alike. Full-circle orientation
 remains unchanged.
 
 Normalize outer radius to the viewport and set inner radius to
-`outerRadius * SI / SF`. Divide the radial band into TR row bands. This
+`outerRadius * SI / SF`, or an explicitly arbitrary 70% inner radius when
+SI equals SF and plain rows exist. Divide the radial band into total chart row bands. This
 preserves the requested circumference ratio but is explicitly a schematic
 representation, not a gauge-correct prediction of a finished garment.
 
@@ -319,7 +386,7 @@ Provide a textual preview description for accessibility.
    chart budget, and derive deterministic row layouts. Depends on app-scaffold.
 3. **Implementing palette and pattern state** (`pattern-state`): implement stable
    color IDs, clear/toggle/replace, palette edits/removal, draft/applied geometry,
-   and confirmed resets. Depends on yoke-model.
+   and confirmed color-loss remapping. Depends on yoke-model.
 4. **Building calculator and chart controls** (`chart-ui`): add inputs, results,
    assumptions, segment controls, semantic chart, increase annotations, palette,
    keyboard interaction, errors, and responsive layout. Depends on pattern-state.
@@ -595,6 +662,15 @@ budget and bound ancestry computation before allocating a full-circle graph.
     seven-entry hamburger menu, Load/Manage lists, independent Save-as copies,
     transactional naming, filesystem/drop imports, and browser verification.
     Complete; depends on header-shortcuts.
+15. **Preserving colors across geometry changes** (`preserve-chart-colors`):
+    remap by round/real-stitch ordinal, confirm exact losses, allow lossless
+    reductions and growth, retain no recovery history, and validate model,
+    browser, preview, and JSON behavior. Complete; depends on pattern-state
+    and guided-calculator.
+16. **Adding initial and final plain rounds** (`plain-rounds`): implement
+    optional SI/SF sections, independent increase timing, continuous/section
+    numbering, edge-aware color remapping, persistence, printing, and focused
+    validation. Complete; depends on preserve-chart-colors and printable-html.
 
 ## Scope exclusions and considerations
 

@@ -128,6 +128,19 @@ test('prints zero-round plans without inventing chart cells or preview stitches'
   await expect(document.locator('body')).toContainText('No rounds to knit');
 });
 
+test('prints plain-only plans without claiming there are no rounds to knit', async ({ page, context }, info) => {
+  await importInputs(page, { si: 16, ip: 8, sf: 16, initialRounds: 2, finalRounds: 3 });
+  await page.locator('#segments').selectOption('4');
+  const document = await downloadedPage(page, context, info);
+  await expect(document.locator('.chart tbody tr')).toHaveCount(5);
+  await expect(document.locator('.chart .section-round')).toHaveText(['I1', 'I2', 'F1', 'F2', 'F3']);
+  await expect(document.locator('.schedule, .chart .added-stitch')).toHaveCount(0);
+  await expect(document.locator('body')).toContainText('No increase rounds.');
+  await expect(document.locator('body')).not.toContainText('No rounds to knit');
+  await expect(document.locator('.preview')).toContainText('arbitrary ring thickness');
+  await document.close();
+});
+
 test('opens an isolated print view with a working native Print / Save as PDF button', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Open print view', exact: true })).toBeVisible();
   await expect(page.locator('#print-plan')).toHaveText('🖨️');

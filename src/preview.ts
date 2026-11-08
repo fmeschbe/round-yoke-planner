@@ -92,6 +92,9 @@ export class Preview {
     if (Math.ceil(geometry.calculation.ip * visibleSegments / geometry.segments) * geometry.calculation.increases > MAX_MARKERS) {
       description += t(' Increase points are densely spaced; dashed bands indicate increase rounds.', {}, this.locale);
     }
+    if (geometry.calculation.si === geometry.calculation.sf) {
+      description += ' ' + t('Equal stitch counts use an arbitrary ring thickness to show plain rounds.', {}, this.locale);
+    }
     this.svg!.querySelector('desc')!.textContent = description;
     this.description.textContent = description;
     this.mode.textContent = t(this.svg!.dataset.renderer === 'raster'
@@ -111,7 +114,8 @@ export class Preview {
     this.visible = visibleSegments;
     this.paths = [];
     this.image = undefined;
-    this.inner = RADIUS * geometry.calculation.si / geometry.calculation.sf;
+    this.inner = geometry.calculation.si === geometry.calculation.sf
+      ? RADIUS * 0.7 : RADIUS * geometry.calculation.si / geometry.calculation.sf;
     const span = TAU * visibleSegments / geometry.segments;
     const sector = TAU / geometry.segments;
     this.start = Math.PI - span / 2;

@@ -17,6 +17,21 @@ function fixture() {
 }
 
 describe('portable plan documents', () => {
+  it('round-trips plain-section counts and their continuously numbered colored cells', () => {
+    const pattern = createPattern(createGeometry(calculate({ si: 8, ip: 2, sf: 16, initialRounds: 2, finalRounds: 3 }), 4));
+    addColor(pattern, '#123456');
+    paint(pattern, 1, 1);
+    paint(pattern, 3, 2);
+    paint(pattern, 7, 3);
+    const document = documentFromPattern(pattern, { id: 'plain-plan', name: 'Plain rounds', createdAt: 1000, updatedAt: 2000 });
+    const restored = patternFromDocument(parseDocument(serializeDocument(document)));
+    expect(restored.geometry.calculation.initialRounds).toBe(2);
+    expect(restored.geometry.calculation.finalRounds).toBe(3);
+    expect(restored.geometry.rows).toHaveLength(7);
+    expect([...restored.cells]).toEqual([...pattern.cells]);
+    expect(() => validateDocument({ ...document, inputs: { ...document.inputs, initialRounds: -1 } })).toThrow(/whole number/);
+  });
+
   it('round-trips all editable data, with derived geometry recomputed', () => {
     const original = fixture();
     const parsed = parseDocument(serializeDocument(original));

@@ -7,6 +7,8 @@ export interface Inputs {
   si: number;
   ip: number;
   sf: number;
+  initialRounds?: number;
+  finalRounds?: number;
 }
 
 export type InputField = keyof Inputs;
@@ -18,14 +20,19 @@ export class PlanError extends LocalizedError {
 }
 
 export interface Calculation extends Inputs {
+  initialRounds: number;
+  finalRounds: number;
   interval: number;
   rounds: number;
+  totalRounds: number;
   increases: number;
   segmentOptions: { count: number; feasible: boolean }[];
 }
 
 export interface Row {
   round: number;
+  section: 'initial' | 'yoke' | 'final';
+  sectionRound: number;
   stitches: number;
   columns: number[];
   increase: boolean;
@@ -77,6 +84,13 @@ export function divisors(value: number): number[] {
 
 export function calculate(inputs: Inputs): Calculation {
   const { si, ip, sf } = inputs;
+  const initialRounds = inputs.initialRounds === undefined ? 0 : inputs.initialRounds;
+  const finalRounds = inputs.finalRounds === undefined ? 0 : inputs.finalRounds;
+  for (const [field, value] of [['initialRounds', initialRounds], ['finalRounds', finalRounds]] as const) {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new PlanError('Enter a nonnegative, safe whole number of plain rounds.', field);
+    }
+  }
   for (const field of ['si', 'ip', 'sf'] as const) {
     if (!Number.isSafeInteger(inputs[field]) || inputs[field] <= 0) {
       throw new PlanError('Enter a positive, safe whole number.', field);
@@ -94,18 +108,20 @@ export function calculate(inputs: Inputs): Calculation {
   const increases = (sf - si) / added;
   const rounds = increases * interval;
   if (!Number.isSafeInteger(rounds)) throw new PlanError('The total rounds exceed safe integer arithmetic.');
-  if (rounds > MAX_CHART_SLOTS) {
+  const totalRounds = rounds + initialRounds + finalRounds;
+  if (!Number.isSafeInteger(totalRounds)) throw new PlanError('The total rounds exceed safe integer arithmetic.');
+  if (totalRounds > MAX_CHART_SLOTS) {
     throw new PlanError('No chart fits the 5,000-slot limit: reduce the number of rounds.');
   }
   const counts = divisors(rounds === 0 ? si : gcd(si, added));
   const segmentOptions = counts.map(count => ({
     count,
-    feasible: rounds === 0 || sf / count <= MAX_CHART_SLOTS / rounds,
+    feasible: totalRounds === 0 || sf / count <= MAX_CHART_SLOTS / totalRounds,
   }));
   if (!segmentOptions.some(option => option.feasible)) {
     throw new PlanError('No segment count fits the 5,000-slot chart limit. Use smaller stitch counts or fewer rounds.');
   }
-  return { ...inputs, interval, increases, rounds, segmentOptions };
+  return { ...inputs, initialRounds, finalRounds, interval, increases, rounds, totalRounds, segmentOptions };
 }
 
 export function createGeometry(calculation: Calculation, segments: number): Geometry {
@@ -114,11 +130,16 @@ export function createGeometry(calculation: Calculation, segments: number): Geom
   }
   const width = calculation.sf / segments;
   const rows: Row[] = [];
-  for (let round = 1; round <= calculation.rounds; round++) {
-    const stitches = calculation.si + 2 * calculation.ip * Math.floor(round / calculation.interval);
+  for (let round = 1; round <= calculation.totalRounds; round++) {
+    const section = round <= calculation.initialRounds ? 'initial'
+      : round <= calculation.initialRounds + calculation.rounds ? 'yoke' : 'final';
+    const sectionRound = section === 'initial' ? round : section === 'yoke'
+      ? round - calculation.initialRounds : round - calculation.initialRounds - calculation.rounds;
+    const stitches = section === 'initial' ? calculation.si : section === 'final' ? calculation.sf
+      : calculation.si + 2 * calculation.ip * Math.floor(sectionRound / calculation.interval);
     const count = stitches / segments;
     const columns = Array.from({ length: count }, (_, j) => Math.floor((j + 0.5) * width / count));
-    const increase = round % calculation.interval === 0;
+    const increase = section === 'yoke' && sectionRound % calculation.interval === 0;
     let addedColumns: number[] = [];
     if (increase) {
       const previousCount = (stitches - 2 * calculation.ip) / segments;
@@ -128,14 +149,16 @@ export function createGeometry(calculation: Calculation, segments: number): Geom
       ));
       addedColumns = columns.filter((_, index) => !inherited.has(index));
     }
-    rows.push({ round, stitches, columns, increase, addedColumns });
+    rows.push({ round, section, sectionRound, stitches, columns, increase, addedColumns });
   }
   return { calculation, segments, width, rows };
 }
 
 export function sameGeometry(a: Geometry, b: Geometry): boolean {
   return a.segments === b.segments && a.calculation.si === b.calculation.si
-    && a.calculation.ip === b.calculation.ip && a.calculation.sf === b.calculation.sf;
+    && a.calculation.ip === b.calculation.ip && a.calculation.sf === b.calculation.sf
+    && a.calculation.initialRounds === b.calculation.initialRounds
+    && a.calculation.finalRounds === b.calculation.finalRounds;
 }
 
 export function isActive(geometry: Geometry, round: number, column: number): boolean {

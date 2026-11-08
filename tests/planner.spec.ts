@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Dialog, Locator, Page } from '@playwright/test';
 import { applyInputs } from './calculator-helper';
+import { menuAction, openMenu } from './plan-helper';
+import { readFile } from 'node:fs/promises';
 
 async function calculate(page: Page, si: string, ip: string, sf: string) {
   await applyInputs(page, { si: Number(si), ip: Number(ip), sf: Number(sf) });
@@ -95,28 +97,139 @@ test('editing and removing palette colors updates existing stitches', async ({ p
   await expect(previewCell(page, 1, 0)).toHaveAttribute('fill', '#eeeeaa');
 });
 
-test('confirms geometry changes, retains palette, and preserves invalid or identical submissions', async ({ page }) => {
+test('confirms only color loss, retains palette, and preserves invalid or identical submissions', async ({ page }) => {
   await calculate(page, '8', '2', '16');
   await addColor(page);
-  await cell(page, 1, 0).click();
+  await cell(page, 1, 15).click();
   await page.getByRole('button', { name: 'Calculate / Apply' }).click();
-  await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
+  await expect(cell(page, 1, 15)).toHaveAttribute('aria-pressed', 'true');
   await calculate(page, '8', '2', '15');
   await expect(page.locator('#library-error')).toContainText('divisible');
-  await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
+  await expect(cell(page, 1, 15)).toHaveAttribute('aria-pressed', 'true');
   page.once('dialog', dialog => dialog.dismiss());
   await page.locator('#segments').selectOption('4');
   await expect(page.locator('#segments')).toHaveValue('1');
-  await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
-  page.once('dialog', dialog => dialog.dismiss());
+  await expect(cell(page, 1, 15)).toHaveAttribute('aria-pressed', 'true');
   await calculate(page, '8', '2', '124');
-  await expect(page.locator('.round-total strong')).toHaveText('2');
-  await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.round-total strong')).toHaveText('29');
+  await expect(cell(page, 1, 118)).toHaveAttribute('aria-pressed', 'true');
   page.once('dialog', dialog => dialog.accept());
   await page.locator('#segments').selectOption('4');
   await expect(page.locator('#segments')).toHaveValue('4');
-  await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Select color 1', exact: true })).toBeVisible();
+});
+
+test('preserves stitch positions through lossless expansion and reduction, including JSON round trips', async ({ page }) => {
+  const unexpected: string[] = [];
+  const onDialog = (dialog: Dialog) => { unexpected.push(dialog.message()); void dialog.dismiss(); };
+  page.on('dialog', onDialog);
+  await page.locator('#segments').selectOption('4');
+  await addColor(page);
+  await cell(page, 1, 38).click();
+  await page.locator('#sf').selectOption('192');
+  await page.locator('#calculator button').click();
+  await expect(page.locator('#chart-size')).toHaveText('48 columns x 32 rounds');
+  await expect(cell(page, 1, 46)).toHaveAttribute('aria-pressed', 'true');
+  await expect(previewCell(page, 1, 46)).toHaveAttribute('fill', '#ba5365');
+  await page.locator('#sf').selectOption('128');
+  await page.locator('#calculator button').click();
+  await expect(page.locator('#chart-size')).toHaveText('32 columns x 16 rounds');
+  await expect(cell(page, 1, 31)).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#segments').selectOption('2');
+  await expect(cell(page, 1, 31)).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#segments').selectOption('4');
+  await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(1);
+  expect(unexpected).toEqual([]);
+  page.off('dialog', onDialog);
+  await openMenu(page);
+  const pending = page.waitForEvent('download');
+  await page.locator('#export-plan').click();
+  const backup = JSON.parse(await readFile((await (await pending).path())!, 'utf8'));
+  expect(backup.version).toBe(1);
+  expect(backup.inputs.sf).toBe(128);
+  expect(backup.cells).toEqual([{ round: 1, column: 31, colorId: backup.colors[0].id }]);
+  await menuAction(page, 'import-plan');
+  const confirmation = page.waitForEvent('dialog');
+  const importing = page.locator('#import-file').setInputFiles({
+    name: 'resized.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)),
+  });
+  await (await confirmation).accept();
+  await importing;
+  await expect(page.locator('#import-dialog')).toBeHidden();
+  await expect(cell(page, 1, 31)).toHaveAttribute('aria-pressed', 'true');
+  await expect(previewCell(page, 1, 31)).toHaveAttribute('fill', '#ba5365');
+});
+
+test('counts bottom-row losses, preserves canceled changes, and never restores truncated colors', async ({ page }) => {
+  await page.locator('#segments').selectOption('4');
+  await page.locator('#sf').selectOption('192');
+  await page.locator('#calculator button').click();
+  await addColor(page);
+  await cell(page, 1, 46).click();
+  await cell(page, 17, 0).click();
+  await cell(page, 32, 47).click();
+  await page.locator('#sf').selectOption('128');
+  const pending = page.waitForEvent('dialog');
+  const shrinking = page.locator('#calculator button').click();
+  const confirmation = await pending;
+  expect(confirmation.message()).toContain('remove 2 colored stitches');
+  expect(confirmation.message()).toContain('will not return');
+  await confirmation.dismiss();
+  await shrinking;
+  await expect(page.locator('#chart-size')).toHaveText('48 columns x 32 rounds');
+  await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(3);
+  const accepting = page.waitForEvent('dialog');
+  const applying = page.locator('#calculator button').click();
+  await (await accepting).accept();
+  await applying;
+  await expect(cell(page, 1, 31)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(1);
+  await page.locator('#sf').selectOption('192');
+  await page.locator('#calculator button').click();
+  await expect(cell(page, 1, 46)).toHaveAttribute('aria-pressed', 'true');
+  await expect(cell(page, 17, 0)).toHaveAttribute('aria-pressed', 'false');
+  await expect(cell(page, 32, 47)).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#palette-colors .palette-row')).toHaveCount(1);
+});
+
+test('warns about color loss from fewer initial stitches even when the chart grows downward', async ({ page }) => {
+  await page.locator('#sf').selectOption('192');
+  await page.locator('#calculator button').click();
+  await expect(page.locator('#chart-size')).toHaveText('96 columns x 32 rounds');
+  await addColor(page);
+  await cell(page, 1, 1).click();
+  await cell(page, 1, 94).click();
+  await page.locator('#si').selectOption('32');
+  const pending = page.waitForEvent('dialog');
+  const applying = page.locator('#calculator button').click();
+  const confirmation = await pending;
+  expect(confirmation.message()).toContain('remove 1 colored stitch.');
+  await confirmation.accept();
+  await applying;
+  await expect(page.locator('#chart-size')).toHaveText('96 columns x 40 rounds');
+  await expect(cell(page, 1, 3)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(1);
+});
+
+test('checks actual stitch losses when only increase timing changes', async ({ page }) => {
+  await page.locator('#segments').selectOption('4');
+  await page.locator('#sf').selectOption('192');
+  await page.locator('#calculator button').click();
+  await addColor(page);
+  await cell(page, 1, 46).click();
+  await cell(page, 8, 47).click();
+  await page.locator('#ip').selectOption('32');
+  const pending = page.waitForEvent('dialog');
+  const applying = page.locator('#calculator button').click();
+  const confirmation = await pending;
+  expect(confirmation.message()).toContain('remove 1 colored stitch.');
+  await confirmation.accept();
+  await applying;
+  await expect(page.locator('#chart-size')).toHaveText('48 columns x 32 rounds');
+  await expect(cell(page, 1, 46)).toHaveAttribute('aria-pressed', 'true');
+  await expect(cell(page, 8, 47)).toBeDisabled();
+  await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(1);
 });
 
 test('uses keyboard navigation that skips inactive cells', async ({ page }) => {

@@ -121,11 +121,12 @@ test('retains unapplied input and translates existing errors when switching lang
 
 test('localizes destructive confirmations and preserves unsaved work on cancellation', async ({ page }) => {
   await page.locator('#add-color').click();
-  await page.locator('#chart button:not(:disabled)').first().click();
+  await page.locator('#chart button[data-round="1"]:not(:disabled)').last().click();
   const pending = page.waitForEvent('dialog');
   const changing = page.locator('#segments').selectOption('2');
   const confirmation = await pending;
-  expect(confirmation.message()).toContain('wird dein Muster gelöscht');
+  expect(confirmation.message()).toContain('1 farbige Masche');
+  expect(confirmation.message()).toContain('nicht wiederhergestellt');
   await confirmation.dismiss();
   await changing;
   await expect(page.locator('#segments')).toHaveValue('1');

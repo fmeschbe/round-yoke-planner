@@ -67,6 +67,8 @@ export function validateDocument(value: unknown): PlanDocument {
   const inputs = object(data.inputs);
   const validatedInputs = {
     si: integer(inputs.si, 1), ip: integer(inputs.ip, 1), sf: integer(inputs.sf, 1),
+    initialRounds: inputs.initialRounds === undefined ? 0 : integer(inputs.initialRounds),
+    finalRounds: inputs.finalRounds === undefined ? 0 : integer(inputs.finalRounds),
   };
   const calculation = calculate(validatedInputs);
   const segments = integer(data.segments, 1);
@@ -144,6 +146,8 @@ export function documentFromPattern(
       si: pattern.geometry.calculation.si,
       ip: pattern.geometry.calculation.ip,
       sf: pattern.geometry.calculation.sf,
+      initialRounds: pattern.geometry.calculation.initialRounds,
+      finalRounds: pattern.geometry.calculation.finalRounds,
     },
     segments: pattern.geometry.segments, visibleSegments: pattern.visibleSegments,
     background: pattern.background, selected: pattern.selected, colors: pattern.colors,

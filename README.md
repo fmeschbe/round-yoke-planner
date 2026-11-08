@@ -35,6 +35,7 @@ translated.
 1. Choose **IP** (increase points) first: **4, 8, 16, or 32**, initially **16**.
    Select **SI** (initial stitches) from valid multiples of IP in **16–100**,
    then **SF** (final stitches) from reachable targets in **100–300**.
+   Optionally add **Initial plain rounds** and **Final plain rounds**.
    Select **Calculate / Apply** to update the pattern.
 2. Choose the number of **repeating segments**. The chart edits one segment;
    its colors repeat around the yoke.
@@ -46,7 +47,14 @@ translated.
 New plans start with IP = 16, SI = 64, and SF = 160. Changing IP or SI retains
 valid dependent selections; otherwise it selects the smallest valid option.
 Final options also respect the chart-size limit. Dropdown changes remain
-unapplied until **Calculate / Apply**.
+unapplied until **Calculate / Apply**, including changes to plain-round counts.
+
+Initial plain rounds have SI stitches; final plain rounds have SF stitches.
+They do not change the increase cadence or TR. The whole chart is numbered
+continuously, with smaller I/Y/F labels distinguishing initial, yoke, and final
+sections and their local round numbers (translated with the interface).
+Initial rounds are added before the existing top row and removed from the top;
+final rounds are added and removed at the bottom.
 
 Saved/imported plans outside the presets or ranges still open unchanged.
 Their extra values are labeled **from current plan** and retained while their
@@ -63,9 +71,25 @@ points; thicker borders mark schematic added stitches on increase rounds.
 Arrow keys move between real stitches, Home/End move to the ends of a row,
 and Space/Enter paints.
 
-Changing the applied inputs or repeating-segment count asks for confirmation
-before clearing a nonempty pattern. The palette is retained. Changing only the
-visible-segment count preserves the pattern.
+Changing the applied inputs or repeating-segment count preserves colors by
+**section round and real-stitch position**, not grid column. The fifth real
+stitch stays the fifth real stitch in its round, even if blocked-cell
+rearrangement moves it left or right. The chart stays anchored top-left,
+expanding/reducing on its right and bottom edges, except initial plain rounds
+are prepended/removed at the top; new stitches are uncolored. Initial colors
+stay anchored nearest the yoke; yoke and final colors retain their local round
+positions when preceding sections change length.
+
+Lossless changes apply without confirmation, including reductions. If colored
+stitch positions or rounds disappear, the planner reports the exact number
+before applying. Cancel preserves the applied chart; confirming removes only
+those colors. Expanding again does **not** restore lost placements. Palette,
+background, and selected color remain unchanged.
+
+A larger rectangle can still lose real-stitch positions when SI, IP, or segment
+count changes. Changing segments also changes how the retained repeat appears
+around the yoke. JSON exports use the updated coordinates with the same format.
+Changing only visible segments preserves the pattern.
 
 ### Saving, opening, and backing up plans
 
@@ -138,11 +162,16 @@ document, not an import format.
 - Increase every `IP / 2` rounds, starting at round `IP / 2`. There are
   `IP / 2 - 1` plain rounds between increase rounds.
 - SF must be at least SI, and `SF - SI` must be divisible by `2 * IP`.
-- Total rounds are `TR = ((SF - SI) / (2 * IP)) * (IP / 2)`.
-  The last round is the final increase; SI is not an extra chart row.
-- Equal SI and SF give zero rounds.
+- Increase-section rounds are `TR = ((SF - SI) / (2 * IP)) * (IP / 2)`.
+  Its last round is the final increase.
+- Total chart rounds are `initialRounds + TR + finalRounds`. Both optional
+  plain-round counts are nonnegative safe whole numbers and default to zero.
+  JSON exports include these counts under `inputs`; omitted counts import as zero.
+- Equal SI and SF give zero increase-section rounds; optional plain rounds
+  still produce a chart and preview with explicitly arbitrary ring thickness.
 - Repeating segments must evenly divide every round's stitch count.
-- Charts are limited to 5,000 rectangular slots, including disabled slots.
+- Charts are limited to 5,000 rectangular slots, including all plain rounds
+  and disabled slots.
   The planner selects a feasible segment count when one segment is too large.
 
 For example, SI = 64, IP = 8, and SF = 160 give **24 rounds**, with six increase

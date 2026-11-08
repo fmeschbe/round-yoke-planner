@@ -46,6 +46,8 @@ body:has(dialog[open]) { overflow: hidden; }
 .library details { margin-top: 14px; }
 #persist-storage { margin-top: 12px; }
 .input-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+.plain-rounds-inputs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
+.section-round { display: block; font-size: .5rem; line-height: 1; font-weight: 400; }
 label { display: block; font-size: .8rem; font-weight: 600; }
 label > span { color: var(--muted); font-weight: 400; padding-left: 4px; }
 input, select, button { font: inherit; }

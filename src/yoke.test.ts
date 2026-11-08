@@ -2,6 +2,34 @@ import { describe, expect, it } from 'vitest';
 import { calculate, createGeometry, divisors, isActive, PlanError } from './yoke';
 
 describe('round calculations', () => {
+  it('adds plain sections without changing the increase-section cadence or count', () => {
+    const calculation = calculate({ si: 64, ip: 8, sf: 96, initialRounds: 3, finalRounds: 2 });
+    const geometry = createGeometry(calculation, 4);
+    expect(calculation.rounds).toBe(8);
+    expect(calculation.totalRounds).toBe(13);
+    expect(geometry.rows.slice(0, 3).map(row => row.stitches)).toEqual([64, 64, 64]);
+    expect(geometry.rows.slice(-2).map(row => row.stitches)).toEqual([96, 96]);
+    expect(geometry.rows.filter(row => row.increase).map(row => [row.round, row.sectionRound])).toEqual([[7, 4], [11, 8]]);
+    expect(geometry.rows.filter(row => row.section !== 'yoke').every(row => !row.increase && !row.addedColumns.length)).toBe(true);
+  });
+
+  it('supports initial and final plain rounds with zero increase-section rounds', () => {
+    const calculation = calculate({ si: 24, ip: 8, sf: 24, initialRounds: 2, finalRounds: 3 });
+    const geometry = createGeometry(calculation, 4);
+    expect(calculation.rounds).toBe(0);
+    expect(calculation.totalRounds).toBe(5);
+    expect(geometry.rows.map(row => row.section)).toEqual(['initial', 'initial', 'final', 'final', 'final']);
+    expect(geometry.rows.every(row => row.stitches === 24 && !row.increase && row.columns.length === 6)).toBe(true);
+  });
+
+  it('counts plain rounds towards the slot budget and rejects invalid counts', () => {
+    const inputs = { si: 16, ip: 8, sf: 16, initialRounds: 4999, finalRounds: 1 };
+    expect(createGeometry(calculate(inputs), 16).rows).toHaveLength(5000);
+    expect(() => calculate({ ...inputs, finalRounds: 2 })).toThrow(/5,000/);
+    expect(() => calculate({ ...inputs, initialRounds: -1 })).toThrow(/nonnegative/);
+    expect(() => calculate({ ...inputs, finalRounds: 1.5 })).toThrow(/nonnegative/);
+  });
+
   it('starts on the interval and ends on the final increase', () => {
     const calculation = calculate({ si: 64, ip: 8, sf: 96 });
     const geometry = createGeometry(calculation, 1);

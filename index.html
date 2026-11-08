@@ -59,6 +59,16 @@
                 <small id="sf-error" class="field-error"></small>
               </label>
             </div>
+            <div class="plain-rounds-inputs">
+              <label for="initialRounds">Initial plain rounds
+                <input id="initialRounds" type="number" min="0" max="5000" step="1" value="0" aria-describedby="initialRounds-error">
+                <small id="initialRounds-error" class="field-error"></small>
+              </label>
+              <label for="finalRounds">Final plain rounds
+                <input id="finalRounds" type="number" min="0" max="5000" step="1" value="0" aria-describedby="finalRounds-error">
+                <small id="finalRounds-error" class="field-error"></small>
+              </label>
+            </div>
             <button type="submit" class="primary">Calculate / Apply</button>
           </form>
           <p id="calculation-error" class="error" role="alert"></p>
@@ -70,12 +80,14 @@
             <summary>How the calculation works</summary>
             <ul>
               <li>Increase points are evenly spaced; each adds two stitches.</li>
-              <li>Increase every IP / 2 rounds, starting at round IP / 2.
+              <li>Within the increase section, increase every IP / 2 rounds, starting at its round IP / 2.
                 There are IP / 2 &minus; 1 plain rounds between increases.</li>
-              <li>Finish on the final increase round. Starting stitches are not an extra row.</li>
+              <li>The increase section ends on its final increase round. Optional plain rounds are separate.</li>
               <li>Use positive whole numbers, even IP, and SI divisible by IP.
                 SF &minus; SI must be divisible by 2 &times; IP.</li>
               <li>The preview is schematic, not a model of gauge, stitch ancestry, or tension.</li>
+              <li>When resizing, colors keep their real-stitch position within each section. Changes that remove colored stitches require confirmation.</li>
+              <li>Initial and final plain rounds use SI and SF stitches. They do not change the increase schedule.</li>
             </ul>
           </details>
         </div>
@@ -174,6 +186,7 @@
           </div>
           <details id="chart-instructions" class="instructions">
             <summary>Chart instructions</summary>
+            <div class="hint">Round labels are continuous. I marks initial plain rounds, Y marks the increase section, and F marks final plain rounds.</div>
             <p class="hint">Round 1 is at the top; read down through the rounds. Hatched slots have no stitch.
               Dashed marks indicate increase points. Thicker borders mark schematic added stitches,
               not exact stitch ancestry. Use arrow keys to move, Space or Enter to paint.</p>

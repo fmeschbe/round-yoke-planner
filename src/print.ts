@@ -53,7 +53,8 @@ thead { display: table-header-group; } tr { break-inside: avoid; page-break-insi
 .chart-panel { margin: 24px 0; overflow-x: auto; }
 .chart { table-layout: fixed; border-collapse: collapse; font-size: 6pt; }
 .chart caption { text-align: left; margin-bottom: 8px; font-size: 10pt; }
-.chart th { font-weight: 500; text-align: center; height: 4mm; padding: 0; }
+.chart th { font-weight: 500; text-align: center; height: 4mm; padding: 0; line-height: 1; }
+.section-round { display: block; font-size: 5pt; line-height: 1; }
 .chart thead th { font-size: 5pt; }
 .chart td { position: relative; height: 4mm; padding: 0; border: .15mm solid #8a958d; text-align: center; }
 .chart .no-stitch { background: repeating-linear-gradient(135deg, #e5e8e0, #e5e8e0 1mm, #bec7bc 1mm, #bec7bc 1.2mm); }
@@ -79,9 +80,9 @@ export function printableHTML(value: PlanDocument, locale: Language = getLanguag
   const container = document.createElement('div');
   const description = document.createElement('p');
   new Preview(container, description, document.createElement('span'), pattern, locale).render();
-  const panels = chartPanels(geometry.width, calculation.rounds);
+  const panels = chartPanels(geometry.width, calculation.totalRounds);
   const schedule = geometry.rows.filter(row => row.increase).map(row =>
-    `<tr><td>${row.round}</td><td>${row.stitches}</td></tr>`).join('');
+    `<tr><td>${row.round}</td><td>${row.sectionRound}</td><td>${row.stitches}</td></tr>`).join('');
   const legend = [
     `<li><span class="swatch" style="background:${pattern.background}"></span>${text('Background')}: ${pattern.background}</li>`,
     ...pattern.colors.map((color, index) =>
@@ -117,7 +118,9 @@ export function printableHTML(value: PlanDocument, locale: Language = getLanguag
         return `<td class="${classes}" data-round="${row.round}" data-column="${column}" aria-label="${label}" title="${label}"${exists ? ` style="background-color:${color}"` : ''}>${exists ? '' : '×'}</td>`;
       }).join('');
       const label = text(row.increase ? '{stitches} stitches around the yoke; increase round' : '{stitches} stitches around the yoke; plain round', { stitches: row.stitches });
-      return `<tr><th scope="row" title="${label}">${row.round}${row.increase ? ' +' : ''}</th>${cells}</tr>`;
+      const section = calculation.initialRounds || calculation.finalRounds
+        ? `<small class="section-round">${text(row.section === 'initial' ? 'I{round}' : row.section === 'yoke' ? 'Y{round}' : 'F{round}', { round: row.sectionRound })}</small>` : '';
+      return `<tr><th scope="row" title="${label}">${row.round}${row.increase ? ' +' : ''}${section}</th>${cells}</tr>`;
     }).join('');
     return `<section class="chart-panel" data-panel="${index + 1}">
       <h3>${text('Panel {number} of {total}', { number: index + 1, total: panels.length })}</h3>
@@ -131,7 +134,7 @@ export function printableHTML(value: PlanDocument, locale: Language = getLanguag
   }).join('');
   const fields = [
     ['Increase points', 'IP', calculation.ip], ['Initial stitches', 'SI', calculation.si],
-    ['Final stitches', 'SF', calculation.sf], ['Total rounds', 'TR', calculation.rounds],
+    ['Final stitches', 'SF', calculation.sf], ['Increase-section rounds', 'TR', calculation.rounds],
   ] as const;
   return `<!doctype html>
 <html lang="${locale}">
@@ -147,6 +150,7 @@ export function printableHTML(value: PlanDocument, locale: Language = getLanguag
   <h1>${escapeHTML(snapshot.name)}</h1>
   <p class="metadata">${text('Document format: {format}; version {version}; layout {layout}.', { format: snapshot.format, version: snapshot.version, layout: snapshot.layoutModel })}<br>${text('Plan snapshot: {date}.', { date: new Date(snapshot.updatedAt).toISOString() })}</p>
   <dl class="inputs">${fields.map(([key, abbreviation, value]) => `<div><dt>${text(key)} (${abbreviation})</dt><dd>${value}</dd></div>`).join('')}</dl>
+  ${calculation.initialRounds || calculation.finalRounds ? `<p>${text('Increase-section rounds (TR): {yoke}. Initial plain rounds: {initial}; final plain rounds: {final}.', { yoke: calculation.rounds, initial: calculation.initialRounds, final: calculation.finalRounds })} ${text('Total rounds')}: ${calculation.totalRounds}.</p>` : ''}
   <p>${text(calculation.interval === 1 ? '{si} to {sf} stitches. {increases} increase rounds, every {interval} round.' : '{si} to {sf} stitches. {increases} increase rounds, every {interval} rounds.', { si: calculation.si, sf: calculation.sf, increases: calculation.increases, interval: calculation.interval })}</p>
   <p>${text('Increase points are evenly spaced; each adds two stitches.')}</p>
   <p>${text('Repeat this chart {count} times around the yoke.', { count: geometry.segments })}</p>
@@ -157,11 +161,12 @@ export function printableHTML(value: PlanDocument, locale: Language = getLanguag
   <h2>${text('Palette legend')}</h2>
   <ul class="legend">${legend}</ul>
   <h2>${text('Increase schedule')}</h2>
-  ${schedule ? `<table class="schedule"><thead><tr><th scope="col">${text('Round')}</th><th scope="col">${text('Stitches')}</th></tr></thead><tbody>${schedule}</tbody></table>` : `<p>${text('No rounds to knit: initial and final stitches are equal.')}</p>`}
+  ${schedule ? `<table class="schedule"><thead><tr><th scope="col">${text('Round')}</th><th scope="col">${text('Increase-section round')}</th><th scope="col">${text('Stitches')}</th></tr></thead><tbody>${schedule}</tbody></table>` : `<p>${text('No increase rounds.')}</p>`}
   <h2 class="chart-panels-heading">${text('Chart panels')}</h2>
   <p>${text('Print at 100% scale in portrait on A4 or US Letter. Enable background graphics and turn off browser headers and footers.')}</p>
   <p>${text('Arrange column panels left to right, then continue with the next round band. Match the repeated round and column labels. Round 1 is at the top.')}</p>
   <p>${text('Hatched cells have no stitch. Dashed marks show increase points. Thick borders mark schematic added stitches, not exact ancestry.')}</p>
+  ${calculation.initialRounds || calculation.finalRounds ? `<p>${text('Round labels are continuous. I marks initial plain rounds, Y marks the increase section, and F marks final plain rounds.')}</p>` : ''}
   ${chart || `<p>${text('No rounds to knit: initial and final stitches are equal.')}</p>`}
 </body>
 </html>`;

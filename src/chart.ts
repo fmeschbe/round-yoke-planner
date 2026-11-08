@@ -59,6 +59,12 @@ export class Chart {
         badge.setAttribute('aria-label', t('Increase round'));
         label.append(badge);
       }
+      if (geometry.calculation.initialRounds || geometry.calculation.finalRounds) {
+        const section = document.createElement('small');
+        section.className = 'section-round';
+        section.textContent = t(row.section === 'initial' ? 'I{round}' : row.section === 'yoke' ? 'Y{round}' : 'F{round}', { round: row.sectionRound });
+        label.append(section);
+      }
       tr.append(label);
       const active = new Set(row.columns);
       const added = new Set(row.addedColumns);

@@ -6,7 +6,7 @@ import { PlanLibrary } from './library';
 import { Preview } from './preview';
 import { calculate, createGeometry, PlanError, sameGeometry } from './yoke';
 import type { Inputs } from './yoke';
-import { addColor, applyGeometry, changeColor, createPattern, paint, removeColor } from './pattern';
+import { addColor, applyGeometry, changeColor, createPattern, paint, remapCells, removeColor } from './pattern';
 
 function element<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -34,7 +34,7 @@ const library = new PlanLibrary(pattern, () => {
   renderPalette();
 }, () => {
   const draft = readInputs();
-  return (['si', 'ip', 'sf'] as const).some(field => draft[field] !== pattern.geometry.calculation[field]);
+  return (['si', 'ip', 'sf', 'initialRounds', 'finalRounds'] as const).some(field => draft[field] !== pattern.geometry.calculation[field]);
 });
 
 function readInputs(): Inputs {
@@ -42,6 +42,8 @@ function readInputs(): Inputs {
     ip: Number(element<HTMLSelectElement>('ip').value),
     si: Number(element<HTMLSelectElement>('si').value),
     sf: Number(element<HTMLSelectElement>('sf').value),
+    initialRounds: Number(element<HTMLInputElement>('initialRounds').value),
+    finalRounds: Number(element<HTMLInputElement>('finalRounds').value),
   };
 }
 
@@ -57,6 +59,8 @@ function renderInputs(draft: Inputs): void {
     }));
     select.value = String(values[field]);
   }
+  element<HTMLInputElement>('initialRounds').value = String(draft.initialRounds ?? 0);
+  element<HTMLInputElement>('finalRounds').value = String(draft.finalRounds ?? 0);
 }
 
 function updateColors(): void {
@@ -72,7 +76,7 @@ function renderConfiguration(clearVisibleError = true): void {
   const total = document.createElement('div');
   total.className = 'round-total';
   const number = document.createElement('strong');
-  number.textContent = String(calculation.rounds);
+  number.textContent = String(calculation.totalRounds);
   const unit = document.createElement('span');
   unit.textContent = t('rounds to knit');
   total.append(number, unit);
@@ -96,6 +100,14 @@ function renderConfiguration(clearVisibleError = true): void {
     ? t('Stitches per round (until the next change): {counts}.', { counts: countGroups.join(' / ') || t('no rounds') })
     : t('Hover a chart row number for its full-round stitch count.');
   results.append(total, detail, rowCounts);
+  if (calculation.initialRounds || calculation.finalRounds) {
+    const plain = document.createElement('p');
+    plain.className = 'hint';
+    plain.textContent = t('Increase-section rounds (TR): {yoke}. Initial plain rounds: {initial}; final plain rounds: {final}.', {
+      yoke: calculation.rounds, initial: calculation.initialRounds, final: calculation.finalRounds,
+    });
+    results.append(plain);
+  }
   segments.replaceChildren(...calculation.segmentOptions.map(({ count, feasible }) => {
     const option = document.createElement('option');
     option.value = String(count);
@@ -107,11 +119,11 @@ function renderConfiguration(clearVisibleError = true): void {
   segments.value = String(geometry.segments);
   visible.max = String(geometry.segments);
   visible.value = String(pattern.visibleSegments);
-  visible.disabled = calculation.rounds === 0;
-  element<HTMLButtonElement>('full-circle').disabled = calculation.rounds === 0;
+  visible.disabled = calculation.totalRounds === 0;
+  element<HTMLButtonElement>('full-circle').disabled = calculation.totalRounds === 0;
   if (clearVisibleError) setText(element('visible-error'), '');
   element('segment-description').textContent = t('Edit one of {count} repeated segments. Segment counts must divide every round.', { count: geometry.segments });
-  element('chart-size').textContent = t('{columns} columns x {rounds} rounds', { columns: geometry.width, rounds: calculation.rounds });
+  element('chart-size').textContent = t('{columns} columns x {rounds} rounds', { columns: geometry.width, rounds: calculation.totalRounds });
   chart.render();
   preview.render();
 }
@@ -193,7 +205,7 @@ function updateSelection(): void {
 
 function clearErrors(): void {
   setText(element('calculation-error'), '');
-  for (const field of ['si', 'ip', 'sf']) {
+  for (const field of ['si', 'ip', 'sf', 'initialRounds', 'finalRounds']) {
     setText(element(`${field}-error`), '');
     element(field).removeAttribute('aria-invalid');
   }
@@ -201,7 +213,10 @@ function clearErrors(): void {
 
 function confirmGeometry(geometry: typeof pattern.geometry): boolean {
   if (sameGeometry(pattern.geometry, geometry)) return true;
-  if (pattern.cells.size && !window.confirm(t('Changing the yoke or repeating segments will clear your pattern. Keep the palette and continue?'))) {
+  const { lost } = remapCells(pattern, geometry);
+  if (lost && !window.confirm(t(lost === 1
+    ? 'This change will remove {count} colored stitch. Continue? Lost stitches will not return if you expand the chart again.'
+    : 'This change will remove {count} colored stitches. Continue? Lost stitches will not return if you expand the chart again.', { count: lost }))) {
     return false;
   }
   applyGeometry(pattern, geometry);
@@ -224,8 +239,8 @@ form.addEventListener('submit', event => {
     setText(element('calculation-error'), message);
     if (error instanceof PlanError && error.field) {
       setText(element(`${error.field}-error`), message);
-      element<HTMLSelectElement>(error.field).setAttribute('aria-invalid', 'true');
-      element<HTMLSelectElement>(error.field).focus();
+      element(error.field).setAttribute('aria-invalid', 'true');
+      element(error.field).focus();
     }
   }
 });
