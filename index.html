@@ -31,16 +31,21 @@
           <h2 id="setup-heading">Start with your stitches</h2>
           <form id="calculator" novalidate autocomplete="off">
             <div class="input-fields">
-              <label for="si">Initial stitches <span>SI</span>
-                <input id="si" name="si" type="number" min="1" step="1" value="64" aria-describedby="si-error">
-                <small id="si-error" class="field-error"></small>
-              </label>
               <label for="ip">Increase points <span>IP</span>
-                <input id="ip" name="ip" type="number" min="2" step="2" value="8" aria-describedby="ip-error">
+                <select id="ip" name="ip" aria-describedby="ip-error">
+                  <option value="4">4</option>
+                  <option value="8">8</option>
+                  <option value="16" selected>16</option>
+                  <option value="32">32</option>
+                </select>
                 <small id="ip-error" class="field-error"></small>
               </label>
+              <label for="si">Initial stitches <span>SI</span>
+                <select id="si" name="si" aria-describedby="si-error"><option value="64">64</option></select>
+                <small id="si-error" class="field-error"></small>
+              </label>
               <label for="sf">Final stitches <span>SF</span>
-                <input id="sf" name="sf" type="number" min="1" step="1" value="160" aria-describedby="sf-error">
+                <select id="sf" name="sf" aria-describedby="sf-error"><option value="160">160</option></select>
                 <small id="sf-error" class="field-error"></small>
               </label>
             </div>

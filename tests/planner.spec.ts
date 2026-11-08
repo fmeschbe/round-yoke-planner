@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import { applyInputs } from './calculator-helper';
 
 async function calculate(page: Page, si: string, ip: string, sf: string) {
-  await page.locator('#si').fill(si);
-  await page.locator('#ip').fill(ip);
-  await page.locator('#sf').fill(sf);
-  await page.getByRole('button', { name: 'Calculate / Apply' }).click();
+  await applyInputs(page, { si: Number(si), ip: Number(ip), sf: Number(sf) });
 }
 
 async function addColor(page: Page, hex = '#ba5365') {
@@ -104,15 +102,14 @@ test('confirms geometry changes, retains palette, and preserves invalid or ident
   await page.getByRole('button', { name: 'Calculate / Apply' }).click();
   await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
   await calculate(page, '8', '2', '15');
-  await expect(page.locator('#sf')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.locator('#calculation-error')).toContainText('divisible');
+  await expect(page.locator('#library-error')).toContainText('divisible');
   await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
   page.once('dialog', dialog => dialog.dismiss());
   await page.locator('#segments').selectOption('4');
   await expect(page.locator('#segments')).toHaveValue('1');
   await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
   page.once('dialog', dialog => dialog.dismiss());
-  await calculate(page, '8', '2', '20');
+  await calculate(page, '8', '2', '124');
   await expect(page.locator('.round-total strong')).toHaveText('2');
   await expect(cell(page, 1, 0)).toHaveAttribute('aria-pressed', 'true');
   page.once('dialog', dialog => dialog.accept());
@@ -147,7 +144,7 @@ test('supports zero rows, oversized-chart feedback and fallback segment selectio
   await expect(page.locator('#chart')).toContainText('No rounds');
   await expect(page.locator('#preview')).toContainText('No rounds');
   await calculate(page, '2', '2', '20006');
-  await expect(page.locator('#calculation-error')).toContainText('5,000');
+  await expect(page.locator('#library-error')).toContainText('5,000');
   await expect(page.locator('.round-total strong')).toHaveText('0');
   await calculate(page, '4998', '2', '5002');
   await expect(page.locator('#segments')).toHaveValue('2');
@@ -179,7 +176,6 @@ test('renders dense full-circle previews without unbounded SVG cells', async ({ 
   });
   expect(pixel).toEqual([255, 0, 0, 255]);
   await expect(page.locator('#preview path')).toHaveCount(12);
-  page.once('dialog', dialog => dialog.accept());
   await calculate(page, '8', '2', '8');
   await setColor(page.locator('#background'), '#000000');
   expect(errors).toEqual([]);
@@ -221,10 +217,10 @@ test('fits a narrow screen and keeps the chart scrollable with palette below', a
 });
 
 test('shows increase markers only on increase rounds and preserves annular orientation', async ({ page }) => {
-  await expect(page.locator('#chart .increase-row')).toHaveCount(6);
+  await expect(page.locator('#chart .increase-row')).toHaveCount(3);
   await expect(page.locator('#chart tr[data-round="1"]')).not.toHaveClass(/increase-row/);
   await expect(page.locator('#preview path[data-increase-round="1"]')).toHaveCount(0);
-  await expect(page.locator('#preview path[data-increase-round="4"]')).toHaveCount(8);
+  await expect(page.locator('#preview path[data-increase-round="8"]')).toHaveCount(16);
   await calculate(page, '8', '2', '16');
   await page.locator('#segments').selectOption('4');
   const radii = await page.locator('#preview').evaluate(preview => {

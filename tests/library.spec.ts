@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { applyInputs } from './calculator-helper';
 
 async function openPlans(page: Page) {
   if (!await page.locator('#plans-dialog').isVisible()) {
@@ -19,10 +20,7 @@ async function closePlans(page: Page) {
 
 async function example(page: Page, name = 'Winter yoke') {
   await closePlans(page);
-  await page.locator('#si').fill('8');
-  await page.locator('#ip').fill('2');
-  await page.locator('#sf').fill('16');
-  await page.getByRole('button', { name: 'Calculate / Apply' }).click();
+  await applyInputs(page, { si: 8, ip: 2, sf: 16 });
   await page.locator('#segments').selectOption('4');
   await page.getByRole('button', { name: 'Add color', exact: true }).click();
   await page.locator('#chart button[data-round="1"][data-column="0"]').click();
@@ -197,12 +195,12 @@ test('warns before opening another plan or discarding unapplied inputs', async (
   await expect(page.locator('#palette-colors .palette-row')).toHaveCount(2);
   await confirmAction(page, () => page.getByRole('button', { name: 'Open plan', exact: true }).click(), true);
   await expect(page.locator('#palette-colors .palette-row')).toHaveCount(1);
-  await page.locator('#sf').fill('20');
+  await page.locator('#sf').selectOption('124');
   await openPlans(page);
   await page.getByRole('button', { name: 'Save plan', exact: true }).click();
   await expect(page.locator('#library-error')).toContainText('Calculate / Apply');
   await confirmAction(page, () => page.getByRole('button', { name: 'New empty plan', exact: true }).click(), false);
-  await expect(page.locator('#sf')).toHaveValue('20');
+  await expect(page.locator('#sf')).toHaveValue('124');
   await confirmAction(page, () => page.getByRole('button', { name: 'New empty plan', exact: true }).click(), true);
   await expect(page.locator('#sf')).toHaveValue('160');
 });

@@ -7,6 +7,7 @@ import { createPattern } from './pattern';
 import type { Pattern } from './pattern';
 import { PlanStore } from './storage';
 import { calculate, createGeometry } from './yoke';
+import { DEFAULT_INPUTS } from './calculator';
 import { copyText, errorText, LocalizedError, onLanguageChange, setText, t } from './i18n';
 import type { Message, Parameters } from './i18n';
 
@@ -50,7 +51,7 @@ export class PlanLibrary {
       this.id = null;
       this.createdAt = 0;
       this.name.value = t('Untitled yoke');
-      Object.assign(this.pattern, createPattern(createGeometry(calculate({ si: 64, ip: 8, sf: 160 }), 1)));
+      Object.assign(this.pattern, createPattern(createGeometry(calculate(DEFAULT_INPUTS), 1)));
       this.dirty = false;
       this.revision++;
       this.onLoad();

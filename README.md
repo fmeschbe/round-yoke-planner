@@ -32,14 +32,26 @@ changes. Plan names, SI/IP/SF abbreviations, and JSON field names are unchanged.
 Controls, instructions, errors, confirmations, and accessibility labels are
 translated.
 
-1. Enter **SI** (initial stitches), **IP** (increase points per increase round),
-   and **SF** (final stitches), then select **Calculate / Apply**.
+1. Choose **IP** (increase points) first: **4, 8, 16, or 32**, initially **16**.
+   Select **SI** (initial stitches) from valid multiples of IP in **16–100**,
+   then **SF** (final stitches) from reachable targets in **100–300**.
+   Select **Calculate / Apply** to update the pattern.
 2. Choose the number of **repeating segments**. The chart edits one segment;
    its colors repeat around the yoke.
 3. Choose a new color and select **Add color**. Click a real stitch in the
    chart to paint it with the selected color.
 4. Adjust **Visible segments**, or select **Full circle**, to explore the preview.
    Change **Background** to set the color of unpainted stitches.
+
+New plans start with IP = 16, SI = 64, and SF = 160. Changing IP or SI retains
+valid dependent selections; otherwise it selects the smallest valid option.
+Final options also respect the chart-size limit. Dropdown changes remain
+unapplied until **Calculate / Apply**.
+
+Saved/imported plans outside the presets or ranges still open unchanged.
+Their extra values are labeled **from current plan** and retained while their
+upstream selections still match that plan. The JSON format and mathematical
+validation rules are unchanged.
 
 Clicking a stitch with the same selected color clears it; another selected
 color replaces it. The **Clear** tool removes a stitch's color. Editing a

@@ -3,6 +3,7 @@ export const german = {
   'A little planning, a lot of possibilities': 'Ein wenig Planung, viele Möglichkeiten',
   'Plan your increases. Find your pattern.': 'Plane deine Zunahmen. Finde dein Muster.',
   'Language': 'Sprache',
+  '{count} (from current plan)': '{count} (aus aktuellem Plan)',
   'Your Plans': 'Deine Pläne',
   'Close Your Plans': 'Deine Pläne schließen',
   'Close': 'Schließen',

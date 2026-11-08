@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { catalogs } from '../src/i18n';
 import { readFile } from 'node:fs/promises';
+import { applyInputs } from './calculator-helper';
 
 test.use({ locale: 'de-DE' });
 
@@ -51,16 +52,13 @@ test('uses German browser preferences and translates instructions, accessibility
       }
     }
     const unchanged = ['Round Yoke', 'English', 'Deutsch', 'Norsk (bokmål)', '🇬🇧', '🇩🇪', '🇳🇴', 'SI', 'IP', 'SF'];
-    return sources.filter(text => !keys.includes(text) && !unchanged.includes(text));
+    return sources.filter(text => !keys.includes(text) && !unchanged.includes(text) && !/^\d+$/.test(text));
   }, { html, keys: Object.keys(catalogs.en) });
   expect(missing).toEqual([]);
 });
 
 test('switches live without changing saved plan data, names, colors, preview settings, or save status', async ({ page }) => {
-  await page.locator('#si').fill('8');
-  await page.locator('#ip').fill('2');
-  await page.locator('#sf').fill('16');
-  await page.locator('#calculator button').click();
+  await applyInputs(page, { si: 8, ip: 2, sf: 16 });
   await page.locator('#segments').selectOption('4');
   await page.locator('#add-color').click();
   await page.locator('#chart button[data-round="1"][data-column="0"]').click();
@@ -97,13 +95,15 @@ test('switches live without changing saved plan data, names, colors, preview set
 });
 
 test('retains unapplied input and translates existing errors when switching language', async ({ page }) => {
-  await page.locator('#ip').fill('3');
-  await page.locator('#calculator button').click();
-  await expect(page.locator('#ip-error')).toHaveText('Die Anzahl der Zunahmestellen muss gerade sein.');
+  await page.locator('#si').selectOption('32');
+  await page.locator('#show-plans').click();
+  await expect(page.locator('#save-plan')).toBeEnabled();
+  await page.locator('#save-plan').click();
+  await expect(page.locator('#library-error')).toContainText('Berechnen / Anwenden');
+  await page.locator('#close-plans').click();
   await page.locator('#language').selectOption('en');
-  await expect(page.locator('#ip')).toHaveValue('3');
-  await expect(page.locator('#ip')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.locator('#ip-error')).toHaveText('Increase points must be even.');
+  await expect(page.locator('#si')).toHaveValue('32');
+  await expect(page.locator('#plan-notice')).toContainText('Calculate / Apply');
   await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
   await page.locator('#show-plans').click();
   await expect(page.locator('#save-plan')).toBeEnabled();
@@ -114,11 +114,10 @@ test('retains unapplied input and translates existing errors when switching lang
   await page.locator('#close-plans').click();
   await page.locator('#language').selectOption('de');
   await expect(page.locator('#plan-notice')).toContainText('kein Round-Yoke-Planner-Dokument');
-  await expect(page.locator('#ip-error')).toHaveText('Die Anzahl der Zunahmestellen muss gerade sein.');
-  await expect(page.locator('#ip')).toHaveValue('3');
+  await expect(page.locator('#si')).toHaveValue('32');
   await page.locator('#language').selectOption('nb');
   await expect(page.locator('#plan-notice')).toContainText('ikke et Round Yoke Planner-dokument');
-  await expect(page.locator('#ip-error')).toHaveText('Antallet økningspunkter må være et partall.');
+  await expect(page.locator('#si')).toHaveValue('32');
 });
 
 test('localizes destructive confirmations and preserves unsaved work on cancellation', async ({ page }) => {

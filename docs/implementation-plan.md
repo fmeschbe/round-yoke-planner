@@ -33,19 +33,19 @@ and SVG/dense annular previews are implemented. The six Phase 1 implementation
 todos below, the Phase 2 local-portability todo, and English/German/Bokmål localization
 are complete; Phases 3 and 4 remain pending. Phases 1 and 2, including modal plan
 management and collapsed instructions, were pushed through `529728b`.
-English/German/Bokmål localization and the flag-only selector are committed
-locally, without a push. Phase 3 is the next roadmap step.
+English/German/Bokmål localization and the flag-only selector were committed
+as `0229173`. Guided stitch selections are also implemented, and these
+refinements are published. Phase 3 is the next roadmap step.
 
 Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 47 Vitest cases and 102 browser acceptance checks for
-the initial English/German implementation, plus 27 targeted language checks
-for the Bokmål/flag refinement across Chromium, Firefox, and WebKit. Coverage
-includes language detection, accessible flag selection, live translation,
-errors, plan preservation, and existing planner/library workflows. TypeScript
-checking, production build, and desktop/mobile layout inspection also passed.
+Verification completed: 51 Vitest cases and 123 browser acceptance checks across
+Chromium, Firefox, and WebKit. Coverage includes cascading stitch selections,
+explicit Apply/reset confirmation, legacy-plan restoration, language switching,
+and existing planner/library workflows. TypeScript checking, production build,
+and desktop/mobile layout inspection also passed.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -56,7 +56,7 @@ server. No server was left running after implementation.
 
 Runtime plans remain entirely browser-local, with no remote runtime assets or
 server plan-data storage. Saving is manual; the latest saved plan reopens on
-reload. Without saved plans, the app opens with a valid 64/8/160 example and
+reload. Without saved plans, the app opens with SI=64, IP=16, SF=160 and
 only the clear tool selected. Unsaved changes are not retained on reload.
 
 ## Four-phase roadmap
@@ -194,8 +194,36 @@ not the intermediate row, so it must not be offered.
 ## State and interaction
 
 Maintain draft calculator values separately from the applied geometry. Use an
-explicit Calculate/Apply action; typing incomplete or invalid values must not
-destroy the displayed pattern.
+explicit Calculate/Apply action; changing draft selections must not destroy the
+displayed pattern. The guided dropdowns below supersede the initial freeform
+numeric controls, while the mathematical/document validation contract remains.
+
+### Guided stitch selections before Phase 3
+
+Order the calculator fields IP, SI, SF. Offer increase-point presets 4, 8, 16,
+and 32, with 16 selected by default. New plans use SI=64 and SF=160.
+Initial choices are multiples of the selected IP in the inclusive range 16–100.
+Final choices are reachable values in the inclusive range 100–300, with
+`SF >= SI` and `(SF - SI) % (2 * IP) === 0`. Filter final choices through the
+existing calculator so a feasible chart must also exist.
+
+When an upstream selection changes, retain dependent values if they remain
+available; otherwise choose the smallest available value. Continue to require
+Calculate / Apply, preserve current pattern data until application, and keep
+the existing confirmation before clearing a colored pattern.
+
+Saved and imported plans outside these UI presets/ranges remain supported by
+the unchanged document schema and validation rules. Add their current values
+as labeled extra options. Retain a legacy SI option only while its IP matches
+the applied plan, and a legacy SF option only while both IP and SI match.
+Restore all selected values on open/reload. Translate extra-option labels
+without changing selections or dirtying a saved plan.
+
+Implemented in `src/calculator.ts`, integrated with `src/main.ts` and new-plan
+creation in `src/library.ts`. Focused unit/browser coverage includes cascading,
+chart-budget exclusions, canceled Apply, legacy imports/reloads, and defaults.
+Older browser examples now enter through JSON import when outside the guided
+ranges rather than requiring freeform numeric entry.
 
 Palette entries have stable IDs; cells reference IDs rather than color strings.
 Initially only clear is available and selected. The clear tool cannot be
@@ -500,13 +528,17 @@ budget and bound ancestry computation before allocating a full-circle graph.
    Complete before Phase 3.
 9. **Implementing printable HTML documents** (`printable-html`): generate
    standalone documents, paginate charts, support browser printing/PDF, and
-   verify offline output. Depends on local-portability and multilingual-ui.
+   verify offline output. Depends on local-portability, multilingual-ui, and guided-calculator.
 10. **Defining stitch ancestry and increase rules** (`ancestry-contract`):
    confirm technique, anchors, orientation, symmetry, layout limits, and legacy
    conversion policy with worked examples. Depends on printable-html.
 11. **Implementing ancestry-aware planning** (`ancestry-planner`): implement
     lineage, chart/preview alignment, document migrations, and updated exports
     with focused compatibility tests. Depends on ancestry-contract.
+12. **Adding guided stitch selections** (`guided-calculator`): implement IP
+    presets and constrained SI/SF dropdowns, cascade to smallest valid choices,
+    preserve explicit Apply and legacy plans, and validate complete workflows.
+    Complete before Phase 3.
 
 ## Scope exclusions and considerations
 

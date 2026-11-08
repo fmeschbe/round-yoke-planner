@@ -1,10 +1,11 @@
 import './styles.css';
 import { errorText, initializeLocalization, onLanguageChange, setText, t } from './i18n';
 import { Chart } from './chart';
+import { DEFAULT_INPUTS, stitchSelections } from './calculator';
 import { PlanLibrary } from './library';
 import { Preview } from './preview';
 import { calculate, createGeometry, PlanError, sameGeometry } from './yoke';
-import type { InputField } from './yoke';
+import type { Inputs } from './yoke';
 import { addColor, applyGeometry, changeColor, createPattern, paint, removeColor } from './pattern';
 
 function element<T extends HTMLElement>(id: string): T {
@@ -16,7 +17,7 @@ initializeLocalization();
 const form = element<HTMLFormElement>('calculator');
 const segments = element<HTMLSelectElement>('segments');
 const visible = element<HTMLInputElement>('visible-segments');
-const pattern = createPattern(createGeometry(calculate({ si: 64, ip: 8, sf: 160 }), 1));
+const pattern = createPattern(createGeometry(calculate(DEFAULT_INPUTS), 1));
 const preview = new Preview(element('preview'), element('preview-description'), element('preview-mode'), pattern);
 const chart = new Chart(element('chart'), pattern, (round, column) => {
   if (!paint(pattern, round, column)) return;
@@ -26,13 +27,37 @@ const chart = new Chart(element('chart'), pattern, (round, column) => {
 });
 const library = new PlanLibrary(pattern, () => {
   const calculation = pattern.geometry.calculation;
-  for (const field of ['si', 'ip', 'sf'] as const) element<HTMLInputElement>(field).value = String(calculation[field]);
+  renderInputs(calculation);
   element<HTMLInputElement>('background').value = pattern.background;
   clearErrors();
   renderConfiguration();
   renderPalette();
-}, () => (['si', 'ip', 'sf'] as const).some(field =>
-  Number(element<HTMLInputElement>(field).value) !== pattern.geometry.calculation[field]));
+}, () => {
+  const draft = readInputs();
+  return (['si', 'ip', 'sf'] as const).some(field => draft[field] !== pattern.geometry.calculation[field]);
+});
+
+function readInputs(): Inputs {
+  return {
+    ip: Number(element<HTMLSelectElement>('ip').value),
+    si: Number(element<HTMLSelectElement>('si').value),
+    sf: Number(element<HTMLSelectElement>('sf').value),
+  };
+}
+
+function renderInputs(draft: Inputs): void {
+  const { values, options } = stitchSelections(draft, pattern.geometry.calculation);
+  for (const field of ['ip', 'si', 'sf'] as const) {
+    const select = element<HTMLSelectElement>(field);
+    select.replaceChildren(...options[field].map(({ value, fromPlan }) => {
+      const option = document.createElement('option');
+      option.value = String(value);
+      option.textContent = fromPlan ? t('{count} (from current plan)', { count: value }) : String(value);
+      return option;
+    }));
+    select.value = String(values[field]);
+  }
+}
 
 function updateColors(): void {
   chart.updateColors();
@@ -180,6 +205,7 @@ function confirmGeometry(geometry: typeof pattern.geometry): boolean {
     return false;
   }
   applyGeometry(pattern, geometry);
+  renderInputs(readInputs());
   library.markDirty();
   renderConfiguration();
   return true;
@@ -189,11 +215,7 @@ form.addEventListener('submit', event => {
   event.preventDefault();
   clearErrors();
   try {
-    const calculation = calculate({
-      si: Number(element<HTMLInputElement>('si').value),
-      ip: Number(element<HTMLInputElement>('ip').value),
-      sf: Number(element<HTMLInputElement>('sf').value),
-    });
+    const calculation = calculate(readInputs());
     const preferred = calculation.segmentOptions.find(option => option.count === pattern.geometry.segments && option.feasible)
       ?? calculation.segmentOptions.find(option => option.feasible)!;
     confirmGeometry(createGeometry(calculation, preferred.count));
@@ -202,8 +224,8 @@ form.addEventListener('submit', event => {
     setText(element('calculation-error'), message);
     if (error instanceof PlanError && error.field) {
       setText(element(`${error.field}-error`), message);
-      element<HTMLInputElement>(error.field).setAttribute('aria-invalid', 'true');
-      element<HTMLInputElement>(error.field as InputField).focus();
+      element<HTMLSelectElement>(error.field).setAttribute('aria-invalid', 'true');
+      element<HTMLSelectElement>(error.field).focus();
     }
   }
 });
@@ -247,20 +269,23 @@ element<HTMLInputElement>('background').addEventListener('input', event => {
   pattern.background = value;
   updateColors();
 });
-form.addEventListener('input', () => library.markDirty());
+form.addEventListener('change', () => {
+  renderInputs(readInputs());
+  clearErrors();
+  library.markDirty();
+});
 
 onLanguageChange(() => {
   const scroll = element('chart');
   const { scrollLeft, scrollTop } = scroll;
+  renderInputs(readInputs());
   renderConfiguration(false);
   renderPalette();
   scroll.scrollLeft = scrollLeft;
   scroll.scrollTop = scrollTop;
 });
 
-for (const field of ['si', 'ip', 'sf'] as const) {
-  element<HTMLInputElement>(field).value = String(pattern.geometry.calculation[field]);
-}
+renderInputs(pattern.geometry.calculation);
 element<HTMLInputElement>('background').value = pattern.background;
 renderConfiguration();
 renderPalette();

@@ -5,6 +5,7 @@ export const norwegian = {
   'A little planning, a lot of possibilities': 'Litt planlegging, mange muligheter',
   'Plan your increases. Find your pattern.': 'Planlegg økningene. Finn mønsteret ditt.',
   'Language': 'Språk',
+  '{count} (from current plan)': '{count} (fra gjeldende plan)',
   'Your Plans': 'Dine planer',
   'Close Your Plans': 'Lukk dine planer',
   'Close': 'Lukk',
