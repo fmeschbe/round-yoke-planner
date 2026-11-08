@@ -99,7 +99,7 @@ rounds spaced four rounds apart.
 The preview and fixed chart slots are schematic. They do not model stitch
 ancestry, a specific increase technique, gauge, tension, or physical drape.
 Visible preview sectors are centered at 6 o'clock. Instructions above both
-views can be collapsed to leave more room for the pattern.
+views are collapsed by default and can be expanded when needed.
 
 ## Development
 

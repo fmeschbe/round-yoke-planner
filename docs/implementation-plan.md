@@ -223,7 +223,7 @@ when space allows. At narrow widths, place the palette below the chart and
 stack editor sections as needed. Keep charts scrollable rather than compressing
 stitches into unusable targets.
 
-Instructions sit above each chart/preview in initially open, collapsible
+Instructions sit above each chart/preview in initially collapsed, expandable
 panels. Palette deletion uses an accessible trash icon beside the color and
 its editing control, not a separate text row. Chart arrow-key movement follows
 the displayed order: Down moves to the next round and Up to the previous round.

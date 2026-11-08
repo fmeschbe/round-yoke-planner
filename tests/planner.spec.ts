@@ -330,6 +330,8 @@ test('places collapsible instructions above each view without affecting the patt
   for (const view of ['chart', 'preview']) {
     const instructions = page.locator(`#${view}-instructions`);
     const text = instructions.locator('p').first();
+    await expect(text).toBeHidden();
+    await instructions.locator('summary').click();
     await expect(text).toBeVisible();
     expect(await instructions.evaluate(element => element.getBoundingClientRect().bottom))
       .toBeLessThanOrEqual(await page.locator(`#${view}`).evaluate(element => element.getBoundingClientRect().top));
