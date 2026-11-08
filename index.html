@@ -20,7 +20,8 @@
             <option value="de" lang="de" aria-label="Deutsch" title="Deutsch">🇩🇪</option>
             <option value="nb" lang="nb" aria-label="Norsk (bokmål)" title="Norsk (bokmål)">🇳🇴</option>
           </select>
-          <span id="plan-status" class="session-badge" aria-live="polite">Browser only &middot; not saved</span>
+          <button id="plan-status" type="button" aria-label="Save plan" aria-describedby="save-status" title="Browser only - not saved"><span aria-hidden="true">💾</span><span id="save-status" class="sr-only" aria-live="polite">Browser only - not saved</span></button>
+          <button id="print-plan" type="button" aria-label="Open print view" title="Open print view"><span aria-hidden="true">🖨️</span></button>
           <button id="show-plans" type="button" aria-haspopup="dialog" aria-controls="plans-dialog">Your Plans</button>
         </div>
       </header>
@@ -85,7 +86,6 @@
             <button id="save-plan" class="primary" type="button">Save plan</button>
             <button id="export-plan" type="button">Export current plan as JSON</button>
             <button id="export-html" type="button">Download printable HTML</button>
-            <button id="print-plan" type="button">Open print view</button>
           </div>
         </div>
         <p class="hint">Printable documents use the current applied plan. They do not save it in this browser.</p>

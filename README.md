@@ -75,6 +75,12 @@ a server, and there is no automatic synchronization between devices.
 Open **Your Plans** in the header to manage plans in an overlay dialog.
 Select **Close** or press Escape to return to the editor.
 
+The header's **💾** button saves a named plan directly. Its tooltip and accessible
+description show whether the plan has unsaved changes or is already saved. For an
+unnamed plan, it opens Your Plans with the default name selected so you can
+name it and save. Automatic default names count as unnamed; saved and imported
+names count as named. The button is disabled while saving or when already saved.
+
 - Enter a **Plan name** and select **Save plan** to store the applied yoke,
   palette, pattern, background, and preview settings. Apply changed calculator
   inputs before saving. Edit the name and Save again to rename that saved plan.
@@ -103,8 +109,9 @@ even if permission is granted.
 
 ### Printing and PDF
 
+Select the header's **🖨️** button to open the print view in a new tab.
 Under **Your Plans**, select **Download printable HTML** for a standalone,
-offline document, or **Open print view** for a new tab. Both use the current
+offline document. Both use the current
 applied plan and interface language without saving it. Apply any draft
 calculator changes first.
 

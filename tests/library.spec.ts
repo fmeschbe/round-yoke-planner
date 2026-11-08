@@ -8,7 +8,7 @@ async function openPlans(page: Page) {
     await page.getByRole('button', { name: 'Your Plans', exact: true }).click();
   }
   await expect(page.locator('#plans-dialog')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save plan', exact: true })).toBeEnabled();
+  await expect(page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true })).toBeEnabled();
 }
 
 async function closePlans(page: Page) {
@@ -31,8 +31,8 @@ async function example(page: Page, name = 'Winter yoke') {
 
 async function save(page: Page) {
   await openPlans(page);
-  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
-  await expect(page.locator('#plan-status')).toHaveText('Saved in this browser');
+  await page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true }).click();
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
 }
 
 async function exported(page: Page) {
@@ -75,6 +75,74 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
+test('prompts unnamed plans from the save shortcut and restores its focus on dismissal', async ({ page }) => {
+  await page.getByRole('button', { name: 'Add color', exact: true }).click();
+  await expect(page.locator('#plan-status > span[aria-hidden="true"]')).toHaveText('💾');
+  await page.locator('.page-header').getByRole('button', { name: 'Save plan', exact: true }).click();
+  await expect(page.locator('#plans-dialog')).toBeVisible();
+  await expect(page.locator('#plan-name')).toBeFocused();
+  expect(await page.locator('#plan-name').evaluate(input => {
+    const name = input as HTMLInputElement;
+    return name.selectionEnd! - name.selectionStart! === name.value.length;
+  })).toBe(true);
+  await expect(page.locator('#saved-plans option')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#plan-status')).toBeFocused();
+  await page.locator('#plan-status').click();
+  await page.locator('#plan-name').fill('Quick-save yoke');
+  await page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true }).click();
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
+});
+
+test('saves named and restored plans directly from the status button without opening the library', async ({ page }) => {
+  await example(page);
+  await page.locator('#plan-status').click();
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
+  await expect(page.locator('#plan-status')).toBeDisabled();
+  await expect(page.locator('#plans-dialog')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#plan-name')).toHaveValue('Winter yoke');
+  const cell = page.locator('#chart button[data-round="1"][data-column="0"]');
+  await cell.click();
+  await page.locator('#plan-status').click();
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
+  await expect(page.locator('#plans-dialog')).toBeHidden();
+  await page.reload();
+  await expect(cell).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('saves imported names directly but asks for a name again for new empty plans', async ({ page }) => {
+  await importJSON(page, sample());
+  await expect(page.locator('#plans-dialog')).toBeHidden();
+  await page.locator('#plan-status').click();
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
+  await expect(page.locator('#plans-dialog')).toBeHidden();
+  await openPlans(page);
+  await expect(page.locator('#saved-plans option')).toHaveText(['Imported yoke']);
+  await page.locator('#new-plan').click();
+  await page.locator('#plan-status').click();
+  await expect(page.locator('#plan-name')).toHaveValue('Untitled yoke');
+  await expect(page.locator('#plan-name')).toBeFocused();
+  await expect(page.locator('#saved-plans option')).toHaveCount(1);
+});
+
+test('keeps draft save errors visible outside the library and prompts for a cleared name', async ({ page }) => {
+  await openPlans(page);
+  await page.locator('#plan-name').fill('Draft yoke');
+  await closePlans(page);
+  await page.locator('#si').selectOption('32');
+  await page.locator('#plan-status').click();
+  await expect(page.locator('#plan-notice')).toContainText('Calculate / Apply');
+  await expect(page.locator('#plans-dialog')).toBeHidden();
+  await expect(page.locator('#saved-plans option')).toHaveCount(0);
+  await openPlans(page);
+  await page.locator('#plan-name').fill(' ');
+  await closePlans(page);
+  await page.locator('#plan-status').click();
+  await expect(page.locator('#plan-name')).toBeFocused();
+  await expect(page.locator('#saved-plans option')).toHaveCount(0);
+});
+
 test('saves manually and reopens the most recently saved snapshot on reload', async ({ page }) => {
   await example(page);
   await page.locator('#visible-segments').fill('2');
@@ -83,7 +151,7 @@ test('saves manually and reopens the most recently saved snapshot on reload', as
     (input as HTMLInputElement).value = '#eeeeaa';
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   await expect(page.locator('#saved-plans option')).toHaveCount(0);
   await save(page);
   await page.reload();
@@ -95,11 +163,11 @@ test('saves manually and reopens the most recently saved snapshot on reload', as
   const cell = page.locator('#chart button[data-round="1"][data-column="0"]');
   await expect(cell).toHaveAttribute('aria-pressed', 'true');
   await cell.click();
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   page.once('dialog', dialog => dialog.accept());
   await page.reload();
   await expect(cell).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#plan-status')).toHaveText('Saved in this browser');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
 });
 
 test('keeps named plans separate, renames on Save, and confirms deletion', async ({ page }) => {
@@ -133,7 +201,7 @@ test('keeps named plans separate, renames on Save, and confirms deletion', async
   await expect(page.locator('#plan-name')).toHaveValue('Renamed yoke');
   await confirmAction(page, () => page.getByRole('button', { name: 'Delete saved plan', exact: true }).click(), true);
   await expect(page.locator('#saved-plans option')).toHaveCount(0);
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   await expect(page.locator('#palette-colors .palette-row')).toHaveCount(1);
   page.once('dialog', dialog => dialog.accept());
   await page.reload();
@@ -150,7 +218,7 @@ test('exports complete documents and imports colliding IDs as a new local plan',
   });
   original.name = '<b>Imported copy</b>';
   await importJSON(page, original);
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   await expect(page.locator('#plan-name')).toHaveValue('<b>Imported copy</b>');
   await expect(page.locator('#saved-plans option')).toHaveCount(1);
   await save(page);
@@ -183,7 +251,7 @@ test('validates imports before discarding work and supports canceling valid impo
   await expect(page.locator('#plan-name')).toHaveValue('Imported yoke');
   await expect(page.locator('#background')).toHaveValue('#fafafa');
   await expect(page.locator('#saved-plans option')).toHaveCount(0);
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
 });
 
 test('warns before opening another plan or discarding unapplied inputs', async ({ page }) => {
@@ -197,7 +265,7 @@ test('warns before opening another plan or discarding unapplied inputs', async (
   await expect(page.locator('#palette-colors .palette-row')).toHaveCount(1);
   await page.locator('#sf').selectOption('124');
   await openPlans(page);
-  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true }).click();
   await expect(page.locator('#library-error')).toContainText('Calculate / Apply');
   await confirmAction(page, () => page.getByRole('button', { name: 'New empty plan', exact: true }).click(), false);
   await expect(page.locator('#sf')).toHaveValue('124');
@@ -216,9 +284,9 @@ test('keeps editing and exporting available when IndexedDB is unavailable', asyn
   await expect(page.locator('#plan-notice')).toBeVisible();
   await example(page);
   await openPlans(page);
-  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true }).click();
   await expect(page.locator('#library-error')).toContainText('storage is unavailable');
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   expect((await exported(page)).cells).toHaveLength(1);
 });
 
@@ -228,9 +296,9 @@ test('reports quota failures without losing work or claiming a save', async ({ p
     IDBObjectStore.prototype.put = () => { throw new DOMException('Quota exhausted.', 'QuotaExceededError'); };
   });
   await openPlans(page);
-  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true }).click();
   await expect(page.locator('#library-error')).toContainText('Browser storage is full');
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   expect((await exported(page)).cells).toHaveLength(1);
   page.once('dialog', dialog => dialog.accept());
   await page.reload();
@@ -248,9 +316,9 @@ test('waits for transaction completion instead of claiming success on request su
     };
   });
   await openPlans(page);
-  await page.getByRole('button', { name: 'Save plan', exact: true }).click();
+  await page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true }).click();
   await expect(page.locator('#library-error')).toContainText('aborted');
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   expect((await exported(page)).cells).toHaveLength(1);
   page.once('dialog', dialog => dialog.accept());
   await page.reload();
@@ -260,14 +328,14 @@ test('waits for transaction completion instead of claiming success on request su
 test('preserves edits made while a save snapshot is in flight', async ({ page }) => {
   await example(page);
   await openPlans(page);
-  await expect(page.getByRole('button', { name: 'Save plan', exact: true })).toBeEnabled();
+  await expect(page.locator('#plans-dialog').getByRole('button', { name: 'Save plan', exact: true })).toBeEnabled();
   await page.evaluate(() => {
     document.getElementById('save-plan')!.click();
     document.getElementById('close-plans')!.click();
     document.getElementById('add-color')!.click();
   });
   await expect(page.locator('#library-message')).toContainText('New changes remain unsaved');
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   expect((await exported(page)).colors).toHaveLength(2);
   page.once('dialog', dialog => dialog.accept());
   await page.reload();
@@ -307,7 +375,7 @@ test('opens Your Plans as a keyboard-accessible overlay without permanently occu
   await openPlans(page);
   await page.locator('#plan-name').fill('My draft');
   await closePlans(page);
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   await openPlans(page);
   await expect(page.locator('#plan-name')).toHaveValue('My draft');
 });
@@ -326,7 +394,7 @@ test('offers empty and JSON creation and explains that imported data replaces th
   }), true);
   await expect(page.locator('#plans-dialog')).toBeHidden();
   await expect(page.locator('#plan-name')).toHaveValue('Imported yoke');
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   await expect(page.locator('#saved-plans option')).toHaveCount(0);
 });
 

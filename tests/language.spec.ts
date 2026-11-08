@@ -51,7 +51,7 @@ test('uses German browser preferences and translates instructions, accessibility
         if (text) sources.push(text);
       }
     }
-    const unchanged = ['Round Yoke', 'English', 'Deutsch', 'Norsk (bokmål)', '🇬🇧', '🇩🇪', '🇳🇴', 'SI', 'IP', 'SF'];
+    const unchanged = ['Round Yoke', 'English', 'Deutsch', 'Norsk (bokmål)', '🇬🇧', '🇩🇪', '🇳🇴', '🖨️', '💾', 'SI', 'IP', 'SF'];
     return sources.filter(text => !keys.includes(text) && !unchanged.includes(text) && !/^\d+$/.test(text));
   }, { html, keys: Object.keys(catalogs.en) });
   expect(missing).toEqual([]);
@@ -67,12 +67,12 @@ test('switches live without changing saved plan data, names, colors, preview set
   await page.locator('#plan-name').fill('Meine Passe <b>rot</b>');
   await expect(page.locator('#save-plan')).toBeEnabled();
   await page.locator('#save-plan').click();
-  await expect(page.locator('#plan-status')).toHaveText('In diesem Browser gespeichert');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'In diesem Browser gespeichert');
   const before = await exportJSON(page);
   await page.locator('#close-plans').click();
   await page.locator('#preview-instructions summary').click();
   await page.locator('#language').selectOption('en');
-  await expect(page.locator('#plan-status')).toHaveText('Saved in this browser');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
   await expect(page.locator('#segments')).toHaveValue('4');
   await expect(page.locator('#visible-segments')).toHaveValue('4');
   await expect(page.locator('#chart button[data-round="1"][data-column="0"]')).toHaveAttribute('aria-label', /Round 1, column 1: color/);
@@ -85,11 +85,11 @@ test('switches live without changing saved plan data, names, colors, preview set
   await page.locator('#close-plans').click();
   await page.locator('#language').selectOption('de');
   await expect(page.locator('#chart button[data-round="1"][data-column="0"]')).toHaveAttribute('aria-label', /Runde 1, Spalte 1: Farbe/);
-  await expect(page.locator('#plan-status')).toHaveText('In diesem Browser gespeichert');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'In diesem Browser gespeichert');
   await expect(page.locator('#preview .preview-stitches path[fill="#ba5365"]')).toHaveCount(4);
   await page.locator('#language').selectOption('nb');
   await expect(page.locator('#chart button[data-round="1"][data-column="0"]')).toHaveAttribute('aria-label', /Omgang 1, kolonne 1: farge/);
-  await expect(page.locator('#plan-status')).toHaveText('Lagret i denne nettleseren');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Lagret i denne nettleseren');
   await page.locator('#show-plans').click();
   expect({ ...await exportJSON(page), updatedAt: before.updatedAt }).toEqual(before);
 });
@@ -104,7 +104,7 @@ test('retains unapplied input and translates existing errors when switching lang
   await page.locator('#language').selectOption('en');
   await expect(page.locator('#si')).toHaveValue('32');
   await expect(page.locator('#plan-notice')).toContainText('Calculate / Apply');
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
   await page.locator('#show-plans').click();
   await expect(page.locator('#save-plan')).toBeEnabled();
   await page.locator('#import-file').setInputFiles({
@@ -144,7 +144,7 @@ test('localizes destructive confirmations and preserves unsaved work on cancella
 
 test('remembers manual selection across reload without saving or dirtying a plan', async ({ page }) => {
   await page.locator('#language').selectOption('en');
-  await expect(page.locator('#plan-status')).toHaveText('Browser only - not saved');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Browser only - not saved');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#language')).toHaveValue('en');
@@ -153,7 +153,7 @@ test('remembers manual selection across reload without saving or dirtying a plan
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'de');
   await page.locator('#language').selectOption('nb');
-  await expect(page.locator('#plan-status')).toHaveText('Bare i nettleseren – ikke lagret');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Bare i nettleseren – ikke lagret');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'nb');
   await expect(page.locator('#language')).toHaveValue('nb');
@@ -208,7 +208,7 @@ test.describe('Norwegian Bokmål', () => {
     });
     await expect(page.locator('#library-error')).toContainText('Filen inneholder ikke gyldig JSON');
     await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(1);
-    await expect(page.locator('#plan-status')).toHaveText('Ulagrede endringer');
+    await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Ulagrede endringer');
   });
 
   test('keeps flag-only selection and Norwegian content readable on mobile', async ({ page }) => {

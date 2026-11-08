@@ -130,7 +130,8 @@ test('prints zero-round plans without inventing chart cells or preview stitches'
 });
 
 test('opens an isolated print view with a working native Print / Save as PDF button', async ({ page }) => {
-  await openPlans(page);
+  await expect(page.getByRole('button', { name: 'Open print view', exact: true })).toBeVisible();
+  await expect(page.locator('#print-plan')).toHaveText('🖨️');
   const pending = page.waitForEvent('popup');
   await page.locator('#print-plan').click();
   const document = await pending;
@@ -141,7 +142,7 @@ test('opens an isolated print view with a working native Print / Save as PDF but
   });
   await document.getByRole('button', { name: 'Print / Save as PDF', exact: true }).click();
   await expect(document.locator('body')).toHaveAttribute('data-print-called', 'true');
-  await expect(page.locator('#plan-status')).toHaveText('Browser only - not saved');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Browser only - not saved');
   await expect(page.locator('#saved-plans option')).toHaveCount(0);
 });
 
@@ -150,15 +151,15 @@ test('reports unapplied drafts and popup blocking without discarding work or dis
   await openPlans(page);
   await page.locator('#export-html').click();
   await expect(page.locator('#library-error')).toContainText('Calculate / Apply');
-  await page.locator('#print-plan').click();
-  await expect(page.locator('#library-error')).toContainText('Calculate / Apply');
   await page.locator('#close-plans').click();
+  await page.locator('#print-plan').click();
+  await expect(page.locator('#plan-notice')).toContainText('Calculate / Apply');
   await page.locator('#calculator button').click();
-  await openPlans(page);
   await page.evaluate(() => { window.open = () => null; });
   await page.locator('#print-plan').click();
-  await expect(page.locator('#library-error')).toContainText('Allow pop-ups');
-  await expect(page.locator('#plan-status')).toHaveText('Unsaved changes');
+  await expect(page.locator('#plan-notice')).toContainText('Allow pop-ups');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
+  await openPlans(page);
   const pending = page.waitForEvent('download');
   await page.locator('#export-html').click();
   expect((await pending).suggestedFilename()).toMatch(/\.html$/);
@@ -167,7 +168,6 @@ test('reports unapplied drafts and popup blocking without discarding work or dis
 
 test('produces A4 and US Letter PDFs with intact chart panels', async ({ page, browserName }, info) => {
   test.skip(browserName !== 'chromium', 'Playwright PDF generation is supported only by Chromium; other engines exercise print styles and the native print button.');
-  await openPlans(page);
   const pending = page.waitForEvent('popup');
   await page.locator('#print-plan').click();
   const document = await pending;

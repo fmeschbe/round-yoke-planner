@@ -59,14 +59,14 @@ test('preserves imported legacy selections on save, reload, and language changes
   await page.locator('#show-plans').click();
   await expect(page.locator('#save-plan')).toBeEnabled();
   await page.locator('#save-plan').click();
-  await expect(page.locator('#plan-status')).toHaveText('Saved in this browser');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
   await page.reload();
   await expect(page.locator('#ip')).toHaveValue('2');
   await expect(page.locator('#si')).toHaveValue('8');
   await expect(page.locator('#sf')).toHaveValue('16');
   await page.locator('#language').selectOption('de');
   await expect(page.locator('#si option[value="8"]')).toHaveText('8 (aus aktuellem Plan)');
-  await expect(page.locator('#plan-status')).toHaveText('In diesem Browser gespeichert');
+  await expect(page.locator('#plan-status')).toHaveAttribute('title', 'In diesem Browser gespeichert');
   await page.locator('#ip').selectOption('32');
   await expect(page.locator('#si')).toHaveValue('32');
   await expect(page.locator('#sf')).toHaveValue('160');

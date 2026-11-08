@@ -24,6 +24,8 @@ export class PlanLibrary {
   private revision = 0;
   private lastSavedAt = 0;
   private busy = false;
+  private named = false;
+  private returnFocus = element('show-plans');
   private name = element<HTMLInputElement>('plan-name');
   private saved = element<HTMLSelectElement>('saved-plans');
   private dialog = element<HTMLDialogElement>('plans-dialog');
@@ -33,17 +35,25 @@ export class PlanLibrary {
     private onLoad: () => void,
     private hasDraft: () => boolean,
   ) {
-    element('show-plans').addEventListener('click', () => {
-      this.dialog.showModal();
-      setText(element('plan-notice'), '');
+    element('show-plans').addEventListener('click', () => this.showDialog(element('show-plans')));
+    element('plan-status').addEventListener('click', () => {
+      if (this.busy) return;
+      if (!this.named || !this.name.value.trim()) {
+        this.showDialog(element('plan-status'));
+        this.name.focus();
+        this.name.select();
+      } else void this.action(() => this.save());
     });
     element('close-plans').addEventListener('click', () => this.dialog.close());
     this.dialog.addEventListener('close', () => {
       copyText(element('plan-notice'), element('library-error'));
-      element('show-plans').focus();
+      (this.returnFocus.matches(':disabled') ? element('show-plans') : this.returnFocus).focus();
     });
     this.name.value = t('Untitled yoke');
-    this.name.addEventListener('input', () => this.markDirty());
+    this.name.addEventListener('input', () => {
+      this.named = !!this.name.value.trim();
+      this.markDirty();
+    });
     element('save-plan').addEventListener('click', () => void this.action(() => this.save()));
     element('open-plan').addEventListener('click', () => void this.action(() => this.open()));
     element('delete-plan').addEventListener('click', () => void this.action(() => this.delete()));
@@ -52,6 +62,7 @@ export class PlanLibrary {
       this.id = null;
       this.createdAt = 0;
       this.name.value = t('Untitled yoke');
+      this.named = false;
       Object.assign(this.pattern, createPattern(createGeometry(calculate(DEFAULT_INPUTS), 1)));
       this.dirty = false;
       this.revision++;
@@ -93,6 +104,12 @@ export class PlanLibrary {
     this.updateStatus();
   }
 
+  private showDialog(opener: HTMLElement): void {
+    this.returnFocus = opener;
+    this.dialog.showModal();
+    setText(element('plan-notice'), '');
+  }
+
   async initialize(): Promise<void> {
     const revision = this.revision;
     await this.action(async () => {
@@ -107,12 +124,15 @@ export class PlanLibrary {
   }
 
   private updateStatus(): void {
-    setText(element('plan-status'), this.dirty
+    const status: Message = this.dirty
       ? 'Unsaved changes'
-      : this.id ? 'Saved in this browser' : 'Browser only - not saved');
+      : this.id ? 'Saved in this browser' : 'Browser only - not saved';
+    setText(element('save-status'), status);
+    element('plan-status').title = t(status);
     for (const id of ['save-plan', 'new-plan', 'export-plan', 'export-html', 'print-plan', 'import-plan', 'import-file']) {
       element<HTMLButtonElement | HTMLInputElement>(id).disabled = this.busy;
     }
+    element<HTMLButtonElement>('plan-status').disabled = this.busy || (!!this.id && !this.dirty && !this.hasDraft());
     this.saved.disabled = this.busy || !this.saved.options.length;
     for (const id of ['open-plan', 'delete-plan']) {
       element<HTMLButtonElement>(id).disabled = this.busy || !this.saved.value;
@@ -183,7 +203,10 @@ export class PlanLibrary {
     this.id = document.id;
     this.createdAt = document.createdAt;
     this.dirty = this.revision !== revision;
-    if (!this.dirty) this.name.value = document.name;
+    if (!this.dirty) {
+      this.name.value = document.name;
+      this.named = true;
+    }
     this.message(this.dirty ? 'Saved the snapshot. New changes remain unsaved.' : 'Saved in this browser.');
     await this.refresh();
   }
@@ -194,6 +217,7 @@ export class PlanLibrary {
     this.id = document.id;
     this.createdAt = document.createdAt;
     this.name.value = document.name;
+    this.named = true;
     if ([...this.saved.options].some(option => option.value === document.id)) this.saved.value = document.id;
     this.dirty = false;
     this.revision++;

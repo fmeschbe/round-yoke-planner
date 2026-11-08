@@ -35,8 +35,9 @@ and printable HTML are complete; Phase 4 remains pending. Phases 1 and 2, includ
 management and collapsed instructions, were pushed through `529728b`.
 English/German/Bokmål localization and the flag-only selector were committed
 as `0229173`. Guided stitch selections are also implemented, and these
-refinements are published through `ba15450`. Phase 3 is implemented locally;
-its changes have not been pushed. Phase 4 requires confirmation of the ancestry
+refinements are published through `ba15450`. Phase 3 is committed locally as
+`a3e3c5b`, without pushing. Header save/print shortcuts are complete locally;
+publication remains pending. Phase 4 requires confirmation of the ancestry
 contract before implementation.
 
 Run `npm install` on a fresh checkout and `npm run dev` to open the application
@@ -53,6 +54,8 @@ Two PDF-generation checks are skipped because Playwright does not expose that
 API for Firefox/WebKit; both engines exercise print styles and the native button.
 TypeScript checking, production build, desktop/mobile layout inspection, and
 representative printed chart inspection also passed.
+Header-shortcut refinements passed 103 affected library, localization, and print
+browser checks plus production build/type checking.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -385,6 +388,16 @@ Show saving/failure state accurately and preserve the active in-memory plan
 when storage is unavailable or a transaction fails. Deleting the active saved
 copy retains its current pattern in the tab as unsaved work.
 
+The header's floppy-disk emoji is a quick-save button: save named plans directly without
+opening the library; prompt unnamed plans in Your Plans with the name selected.
+Automatic default names count as unnamed, while saved/imported names count as
+named. Explicit name edits determine whether the current name is provided.
+Disable the shortcut during operations and when already saved. Preserve draft
+validation and show failures outside the modal; restore focus to the actual
+opener on dismissal.
+Keep save status in its localized tooltip and accessible live description,
+without visible text between the header icons.
+
 Use format `round-yoke-planner`, document version 1, and layout model
 `schematic-v1`. Names are trimmed and limited to 100 characters. Confirmed
 file/document size limit is 1 MiB, measured in UTF-8 bytes; check File.size
@@ -472,8 +485,9 @@ useful as well. Split large charts into numbered panels with repeated row/
 column labels and assembly guidance rather than shrinking cells beyond
 readability. Do not split individual chart rows unintentionally.
 
-Implemented in `src/print.ts`, integrated into the current-plan controls in
-`src/library.ts`. Download printable HTML or open an isolated print tab; neither
+Implemented in `src/print.ts`, integrated through `src/library.ts`. Download
+printable HTML in Your Plans or use the accessible, localized header printer
+emoji button to open an isolated print tab; neither
 saves the plan. Reject unapplied calculator drafts, and provide download guidance
 if the browser blocks pop-ups. Reuse the SVG preview with an explicit locale;
 embed a bounded data-PNG for dense previews. All document copy is translated
@@ -558,6 +572,10 @@ budget and bound ancestry computation before allocating a full-circle graph.
     presets and constrained SI/SF dropdowns, cascade to smallest valid choices,
     preserve explicit Apply and legacy plans, and validate complete workflows.
     Complete before Phase 3.
+13. **Adding header save and print shortcuts** (`header-shortcuts`): enable
+    direct saving of named plans, prompt unnamed plans, move the printer emoji
+    action to the header, and validate focus, errors, imports/reloads, and
+    localization. Complete; depends on local-portability and printable-html.
 
 ## Scope exclusions and considerations
 
