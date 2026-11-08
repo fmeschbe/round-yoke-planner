@@ -72,30 +72,34 @@ visible-segment count preserves the pattern.
 Saving is **manual**, using IndexedDB in your browser. No plan data is sent to
 a server, and there is no automatic synchronization between devices.
 
-Open **Your Plans** in the header to manage plans in an overlay dialog.
-Select **Close** or press Escape to return to the editor.
+Open the header's **☰ Your Plans** popup menu. Arrow keys move through its
+entries; Escape or clicking outside dismisses it. Dialogs also close with
+Cancel/Close or Escape.
 
 The header's **💾** button saves a named plan directly. Its tooltip and accessible
 description show whether the plan has unsaved changes or is already saved. For an
-unnamed plan, it opens Your Plans with the default name selected so you can
+unnamed plan, it opens the naming dialog with the default name selected so you can
 name it and save. Automatic default names count as unnamed; saved and imported
 names count as named. The button is disabled while saving or when already saved.
 
-- Enter a **Plan name** and select **Save plan** to store the applied yoke,
-  palette, pattern, background, and preview settings. Apply changed calculator
-  inputs before saving. Edit the name and Save again to rename that saved plan.
-- Choose a saved entry and select **Open plan** to load it.
-  The most recently saved plan reopens automatically
-  on your next visit.
-- Select **Delete saved plan** to delete its stored copy, after confirmation.
-  Deleting the active saved copy keeps the current pattern in the tab, unsaved.
+- **New plan** starts with default stitch counts and no colors.
+- **New plan from JSON** opens a file chooser/drop dialog. Select a file from
+  your filesystem or drop one JSON plan into the drop area. Imports validate
+  before replacing the editor, remain unsaved until Save, and receive a fresh
+  ID rather than overwriting matching saved entries. File limit: **1 MiB**.
+- **Load plan** shows saved plans. Choose an entry and select **Open plan**.
+  The most recently saved plan reopens automatically on your next visit.
+- **Save as** opens the naming dialog and saves a separate copy of the current
+  applied yoke, palette, pattern, background, and preview settings. The original
+  saved plan stays untouched; the copy becomes the active plan. Canceling leaves
+  the current name and plan unchanged. Apply calculator changes before saving.
 - **Export current plan as JSON** downloads the current applied editor plan,
   not the selected saved entry, without saving to IndexedDB.
-- Under **New plan**, choose **New empty plan** for default stitch counts and
-  no colors, or **New plan from JSON** to import a validated file. Both replace
-  the current editor plan, confirming before discarding unsaved changes.
-  Saved copies remain untouched. Imports remain unsaved until Save and never
-  overwrite a saved plan with a matching ID. Documents are limited to **1 MiB**.
+- **Download printable HTML** downloads an offline reading/printing document.
+- **Manage plans** lists saved entries for **Rename plan** or **Delete saved
+  plan**. Renaming an inactive plan does not replace the editor. Deletion asks
+  for confirmation; deleting the active saved copy keeps its pattern in the
+  editor, unsaved.
 
 Opening or starting another plan asks before discarding unsaved changes.
 Unsaved changes are not retained on reload. Saving errors leave the current
@@ -110,7 +114,7 @@ even if permission is granted.
 ### Printing and PDF
 
 Select the header's **🖨️** button to open the print view in a new tab.
-Under **Your Plans**, select **Download printable HTML** for a standalone,
+In the **☰ menu**, select **Download printable HTML** for a standalone,
 offline document. Both use the current
 applied plan and interface language without saving it. Apply any draft
 calculator changes first.

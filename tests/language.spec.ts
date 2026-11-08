@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import { catalogs } from '../src/i18n';
 import { readFile } from 'node:fs/promises';
 import { applyInputs } from './calculator-helper';
+import { menuAction, openMenu } from './plan-helper';
 
 test.use({ locale: 'de-DE' });
 
@@ -11,6 +12,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function exportJSON(page: Page) {
+  await openMenu(page);
   const pending = page.waitForEvent('download');
   await page.locator('#export-plan').click();
   const path = await (await pending).path();
@@ -31,8 +33,8 @@ test('uses German browser preferences and translates instructions, accessibility
   await expect(page.locator('#chart-instructions')).toContainText('schematisch hinzugefügte Maschen');
   await expect(page.locator('#chart-instructions p')).toBeHidden();
   await page.getByRole('button', { name: 'Deine Pläne', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Deine Pläne' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Aktuellen Plan als JSON exportieren' })).toBeVisible();
+  await expect(page.getByRole('menu', { name: 'Deine Pläne' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Aktuellen Plan als JSON exportieren' })).toBeVisible();
   await expect(page.locator('#new-plan-help')).toContainText('gespeicherte Kopien bleiben unverändert');
 
   const html = await (await page.request.get('/')).text();
@@ -51,7 +53,7 @@ test('uses German browser preferences and translates instructions, accessibility
         if (text) sources.push(text);
       }
     }
-    const unchanged = ['Round Yoke', 'English', 'Deutsch', 'Norsk (bokmål)', '🇬🇧', '🇩🇪', '🇳🇴', '🖨️', '💾', 'SI', 'IP', 'SF'];
+    const unchanged = ['Round Yoke', 'English', 'Deutsch', 'Norsk (bokmål)', '🇬🇧', '🇩🇪', '🇳🇴', '🖨️', '💾', '☰', 'SI', 'IP', 'SF'];
     return sources.filter(text => !keys.includes(text) && !unchanged.includes(text) && !/^\d+$/.test(text));
   }, { html, keys: Object.keys(catalogs.en) });
   expect(missing).toEqual([]);
@@ -63,13 +65,12 @@ test('switches live without changing saved plan data, names, colors, preview set
   await page.locator('#add-color').click();
   await page.locator('#chart button[data-round="1"][data-column="0"]').click();
   await page.locator('#full-circle').click();
-  await page.locator('#show-plans').click();
+  await menuAction(page, 'save-as');
   await page.locator('#plan-name').fill('Meine Passe <b>rot</b>');
   await expect(page.locator('#save-plan')).toBeEnabled();
   await page.locator('#save-plan').click();
   await expect(page.locator('#plan-status')).toHaveAttribute('title', 'In diesem Browser gespeichert');
   const before = await exportJSON(page);
-  await page.locator('#close-plans').click();
   await page.locator('#preview-instructions summary').click();
   await page.locator('#language').selectOption('en');
   await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
@@ -82,7 +83,6 @@ test('switches live without changing saved plan data, names, colors, preview set
   await expect(page.locator('#plan-name')).toHaveValue('Meine Passe <b>rot</b>');
   await expect(page.locator('#saved-plans option')).toHaveText('Meine Passe <b>rot</b>');
   expect({ ...await exportJSON(page), updatedAt: before.updatedAt }).toEqual(before);
-  await page.locator('#close-plans').click();
   await page.locator('#language').selectOption('de');
   await expect(page.locator('#chart button[data-round="1"][data-column="0"]')).toHaveAttribute('aria-label', /Runde 1, Spalte 1: Farbe/);
   await expect(page.locator('#plan-status')).toHaveAttribute('title', 'In diesem Browser gespeichert');
@@ -90,28 +90,27 @@ test('switches live without changing saved plan data, names, colors, preview set
   await page.locator('#language').selectOption('nb');
   await expect(page.locator('#chart button[data-round="1"][data-column="0"]')).toHaveAttribute('aria-label', /Omgang 1, kolonne 1: farge/);
   await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Lagret i denne nettleseren');
-  await page.locator('#show-plans').click();
+  await openMenu(page);
   expect({ ...await exportJSON(page), updatedAt: before.updatedAt }).toEqual(before);
 });
 
 test('retains unapplied input and translates existing errors when switching language', async ({ page }) => {
   await page.locator('#si').selectOption('32');
-  await page.locator('#show-plans').click();
+  await menuAction(page, 'save-as');
   await expect(page.locator('#save-plan')).toBeEnabled();
   await page.locator('#save-plan').click();
-  await expect(page.locator('#library-error')).toContainText('Berechnen / Anwenden');
-  await page.locator('#close-plans').click();
+  await expect(page.locator('#name-error')).toContainText('Berechnen / Anwenden');
+  await page.locator('#close-name').click();
   await page.locator('#language').selectOption('en');
   await expect(page.locator('#si')).toHaveValue('32');
   await expect(page.locator('#plan-notice')).toContainText('Calculate / Apply');
   await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Unsaved changes');
-  await page.locator('#show-plans').click();
-  await expect(page.locator('#save-plan')).toBeEnabled();
+  await menuAction(page, 'import-plan');
   await page.locator('#import-file').setInputFiles({
     name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{}'),
   });
-  await expect(page.locator('#library-error')).toContainText('not a Round Yoke Planner document');
-  await page.locator('#close-plans').click();
+  await expect(page.locator('#import-error')).toContainText('not a Round Yoke Planner document');
+  await page.locator('#close-import').click();
   await page.locator('#language').selectOption('de');
   await expect(page.locator('#plan-notice')).toContainText('kein Round-Yoke-Planner-Dokument');
   await expect(page.locator('#si')).toHaveValue('32');
@@ -138,7 +137,7 @@ test('localizes destructive confirmations and preserves unsaved work on cancella
   expect(discard.message()).toContain('Gespeicherte Kopien bleiben unverändert');
   await discard.dismiss();
   await creating;
-  await expect(page.locator('#plans-dialog')).toBeVisible();
+  await expect(page.locator('#plan-menu')).toBeHidden();
   await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(1);
 });
 
@@ -170,8 +169,8 @@ test('keeps German mobile controls usable and works when preference storage is u
   await expect(page.locator('html')).toHaveAttribute('lang', 'de');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.locator('#show-plans').click();
-  await expect(page.getByRole('button', { name: 'Aktuellen Plan als JSON exportieren' })).toBeVisible();
-  await page.locator('#close-plans').click();
+  await expect(page.getByRole('menuitem', { name: 'Aktuellen Plan als JSON exportieren' })).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.locator('#language').selectOption('en');
   await expect(page.getByRole('button', { name: 'Your Plans', exact: true })).toBeVisible();
 });
@@ -188,8 +187,8 @@ test.describe('Norwegian Bokmål', () => {
     await expect(page.locator('#chart-instructions')).toContainText('skjematisk tilføyde masker');
     await expect(page.locator('#preview-instructions p').first()).toBeHidden();
     await page.locator('#show-plans').click();
-    await expect(page.getByRole('dialog', { name: 'Dine planer', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Eksporter gjeldende plan som JSON', exact: true })).toBeVisible();
+    await expect(page.getByRole('menu', { name: 'Dine planer', exact: true })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Eksporter gjeldende plan som JSON', exact: true })).toBeVisible();
     await expect(page.locator('#new-plan-help')).toContainText('lagrede kopier forblir uendret');
   });
 
@@ -203,10 +202,11 @@ test.describe('Norwegian Bokmål', () => {
     expect(confirmation.message()).toContain('forkaste ulagrede endringer');
     await confirmation.dismiss();
     await creating;
+    await menuAction(page, 'import-plan');
     await page.locator('#import-file').setInputFiles({
       name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('{'),
     });
-    await expect(page.locator('#library-error')).toContainText('Filen inneholder ikke gyldig JSON');
+    await expect(page.locator('#import-error')).toContainText('Filen inneholder ikke gyldig JSON');
     await expect(page.locator('#chart button[aria-pressed="true"]')).toHaveCount(1);
     await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Ulagrede endringer');
   });
@@ -218,10 +218,10 @@ test.describe('Norwegian Bokmål', () => {
     await expect(page.locator('.page-header')).not.toContainText('Språk');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     await page.locator('#show-plans').click();
-    const bounds = await page.locator('#plans-dialog').boundingBox();
+    const bounds = await page.locator('#plan-menu').boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
-    await page.locator('#close-plans').click();
+    await page.keyboard.press('Escape');
     await page.locator('#language').selectOption('de');
     await expect(page.getByRole('combobox', { name: 'Sprache', exact: true })).toHaveValue('de');
     await page.locator('#language').selectOption('en');

@@ -3,13 +3,14 @@ import type { BrowserContext, Page, TestInfo } from '@playwright/test';
 import { copyFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { importInputs } from './calculator-helper';
+import { openMenu } from './plan-helper';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
 async function openPlans(page: Page) {
-  if (!await page.locator('#plans-dialog').isVisible()) await page.locator('#show-plans').click();
+  await openMenu(page);
   await expect(page.locator('#export-html')).toBeEnabled();
 }
 
@@ -38,7 +39,8 @@ for (const [locale, printButton, legend] of [
   ['nb', 'Skriv ut / Lagre som PDF', 'Fargeoversikt'],
 ] as const) {
   test(`downloads an offline, escaped ${locale} document matching the current colored plan`, async ({ page, context }, info) => {
-    await importInputs(page, { si: 8, ip: 2, sf: 16 });
+    const name = '<script>window.hacked=1</script> & "Rød"';
+    await importInputs(page, { si: 8, ip: 2, sf: 16 }, name);
     await page.locator('#segments').selectOption('4');
     await page.locator('#add-color').click();
     await page.locator('#chart button[data-round="1"][data-column="0"]').click();
@@ -49,9 +51,6 @@ for (const [locale, printButton, legend] of [
     await page.locator('#visible-segments').fill('2');
     await page.locator('#visible-segments').blur();
     await page.locator('#language').selectOption(locale);
-    await openPlans(page);
-    const name = '<script>window.hacked=1</script> & "Rød"';
-    await page.locator('#plan-name').fill(name);
     const document = await downloadedPage(page, context, info);
     await expect(document.locator('html')).toHaveAttribute('lang', locale);
     await expect(document.locator('h1')).toHaveText(name);
@@ -151,7 +150,6 @@ test('reports unapplied drafts and popup blocking without discarding work or dis
   await openPlans(page);
   await page.locator('#export-html').click();
   await expect(page.locator('#library-error')).toContainText('Calculate / Apply');
-  await page.locator('#close-plans').click();
   await page.locator('#print-plan').click();
   await expect(page.locator('#plan-notice')).toContainText('Calculate / Apply');
   await page.locator('#calculator button').click();

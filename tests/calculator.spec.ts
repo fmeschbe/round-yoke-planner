@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { importInputs } from './calculator-helper';
+import { menuAction } from './plan-helper';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -39,11 +40,11 @@ test('cascades to smallest valid choices without applying or discarding the curr
   await page.locator('#calculator button').click();
   await expect(page.locator('.round-total strong')).toHaveText('24');
   await expect(painted).toHaveAttribute('aria-pressed', 'true');
-  await page.locator('#show-plans').click();
+  await menuAction(page, 'save-as');
   await expect(page.locator('#save-plan')).toBeEnabled();
   await page.locator('#save-plan').click();
-  await expect(page.locator('#library-error')).toContainText('Calculate / Apply');
-  await page.locator('#close-plans').click();
+  await expect(page.locator('#name-error')).toContainText('Calculate / Apply');
+  await page.locator('#close-name').click();
   page.once('dialog', dialog => dialog.accept());
   await page.locator('#calculator button').click();
   await expect(page.locator('.round-total strong')).toHaveText('32');
@@ -56,9 +57,7 @@ test('preserves imported legacy selections on save, reload, and language changes
   await expect(page.locator('#ip option[value="2"]')).toHaveText('2 (from current plan)');
   await expect(page.locator('#si')).toHaveValue('8');
   await expect(page.locator('#sf')).toHaveValue('16');
-  await page.locator('#show-plans').click();
-  await expect(page.locator('#save-plan')).toBeEnabled();
-  await page.locator('#save-plan').click();
+  await page.locator('#plan-status').click();
   await expect(page.locator('#plan-status')).toHaveAttribute('title', 'Saved in this browser');
   await page.reload();
   await expect(page.locator('#ip')).toHaveValue('2');

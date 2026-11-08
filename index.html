@@ -22,10 +22,19 @@
           </select>
           <button id="plan-status" type="button" aria-label="Save plan" aria-describedby="save-status" title="Browser only - not saved"><span aria-hidden="true">💾</span><span id="save-status" class="sr-only" aria-live="polite">Browser only - not saved</span></button>
           <button id="print-plan" type="button" aria-label="Open print view" title="Open print view"><span aria-hidden="true">🖨️</span></button>
-          <button id="show-plans" type="button" aria-haspopup="dialog" aria-controls="plans-dialog">Your Plans</button>
+          <button id="show-plans" type="button" aria-label="Your Plans" title="Your Plans" aria-haspopup="menu" aria-expanded="false" aria-controls="plan-menu"><span aria-hidden="true">☰</span></button>
         </div>
       </header>
       <p id="plan-notice" class="error" role="alert"></p>
+      <div id="plan-menu" class="plan-menu" popover role="menu" aria-label="Your Plans">
+        <button id="new-plan" type="button" role="menuitem">New plan</button>
+        <button id="import-plan" type="button" role="menuitem">New plan from JSON</button>
+        <button id="load-plan" type="button" role="menuitem">Load plan</button>
+        <button id="save-as" type="button" role="menuitem">Save as</button>
+        <button id="export-plan" type="button" role="menuitem">Export current plan as JSON</button>
+        <button id="export-html" type="button" role="menuitem">Download printable HTML</button>
+        <button id="manage-plans" type="button" role="menuitem">Manage plans</button>
+      </div>
 
       <section class="setup panel" aria-labelledby="setup-heading">
         <div class="setup-inputs">
@@ -74,48 +83,22 @@
 
       <dialog id="plans-dialog" class="library panel" aria-labelledby="library-heading">
         <div class="section-heading">
-          <h2 id="library-heading">Your Plans</h2>
+          <h2 id="library-heading">Load plan</h2>
           <button id="close-plans" type="button" aria-label="Close Your Plans">Close</button>
         </div>
-        <h3>Current plan</h3>
-        <div class="library-controls">
-          <label for="plan-name">Plan name
-            <input id="plan-name" type="text" maxlength="100" value="Untitled yoke" autocomplete="off" autofocus>
-          </label>
-          <div class="library-actions">
-            <button id="save-plan" class="primary" type="button">Save plan</button>
-            <button id="export-plan" type="button">Export current plan as JSON</button>
-            <button id="export-html" type="button">Download printable HTML</button>
-          </div>
-        </div>
-        <p class="hint">Printable documents use the current applied plan. They do not save it in this browser.</p>
-        <h3>Saved plans</h3>
         <div class="library-controls">
           <label for="saved-plans">Saved in this browser
-            <select id="saved-plans" aria-describedby="library-help"></select>
+            <select id="saved-plans" size="6" aria-describedby="library-help" autofocus></select>
           </label>
           <div class="library-actions">
             <button id="open-plan" type="button">Open plan</button>
+            <button id="rename-plan" type="button" hidden>Rename plan</button>
             <button id="delete-plan" type="button">Delete saved plan</button>
           </div>
         </div>
-        <fieldset class="new-plan-options" aria-describedby="new-plan-help">
-          <legend>New plan</legend>
-          <div class="library-actions">
-            <button id="new-plan" type="button">New empty plan</button>
-            <button id="import-plan" type="button">New plan from JSON</button>
-            <input id="import-file" type="file" accept=".json,application/json" hidden>
-          </div>
-          <p id="new-plan-help" class="hint">Both options replace the current plan in the editor.
-            Unsaved changes require confirmation; existing saved copies stay untouched.
-            Empty plans start with default stitch counts and no colors.
-            JSON plans are validated first and remain unsaved until you select Save. File limit: 1 MiB.</p>
-        </fieldset>
         <p id="library-message" class="hint" role="status"></p>
         <p id="library-error" class="error" role="alert"></p>
-        <p id="library-help" class="hint">Save is manual. Edit the name and Save to rename a plan.
-          Apply input changes before saving. Your most recently saved plan reopens on a new visit.
-          Export downloads the current applied plan, not the selected saved entry.</p>
+        <p id="library-help" class="hint">Plans stay in this browser. Opening a plan replaces the editor after confirmation if there are unsaved changes.</p>
         <details>
           <summary>About local storage and backups</summary>
           <p class="hint">Plans stay in this browser profile and website origin, with no server storage
@@ -123,6 +106,36 @@
             Export JSON backups to move plans between browsers or devices.</p>
           <button id="persist-storage" type="button">Request persistent storage</button>
         </details>
+      </dialog>
+
+      <dialog id="name-dialog" class="library panel" aria-labelledby="name-heading">
+        <div class="section-heading">
+          <h2 id="name-heading">Save as</h2>
+          <button id="close-name" type="button">Cancel</button>
+        </div>
+        <form id="name-form" novalidate>
+          <label for="plan-name">Plan name
+            <input id="plan-name" type="text" maxlength="100" value="Untitled yoke" autocomplete="off" autofocus>
+          </label>
+          <p id="name-help" class="hint">Save as creates a separate saved copy and leaves the original untouched.</p>
+          <p id="name-error" class="error" role="alert"></p>
+          <button id="save-plan" class="primary" type="submit">Save plan</button>
+        </form>
+      </dialog>
+
+      <dialog id="import-dialog" class="library panel" aria-labelledby="import-heading">
+        <div class="section-heading">
+          <h2 id="import-heading">New plan from JSON</h2>
+          <button id="close-import" type="button">Cancel</button>
+        </div>
+        <button id="choose-json" type="button">Choose JSON file</button>
+        <input id="import-file" type="file" accept=".json,application/json" hidden>
+        <div id="drop-zone" class="drop-zone">Drop a JSON plan here.</div>
+        <p id="new-plan-help" class="hint">Both options replace the current plan in the editor.
+          Unsaved changes require confirmation; existing saved copies stay untouched.
+          Empty plans start with default stitch counts and no colors.
+          JSON plans are validated first and remain unsaved until you select Save. File limit: 1 MiB.</p>
+        <p id="import-error" class="error" role="alert"></p>
       </dialog>
 
       <section class="editor" aria-label="Pattern editor">

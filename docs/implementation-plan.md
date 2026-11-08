@@ -36,7 +36,8 @@ management and collapsed instructions, were pushed through `529728b`.
 English/German/Bokmål localization and the flag-only selector were committed
 as `0229173`. Guided stitch selections are also implemented, and these
 refinements are published through `ba15450`. Phase 3 is committed locally as
-`a3e3c5b`, without pushing. Header save/print shortcuts are complete locally;
+`a3e3c5b`, without pushing. Header save/print shortcuts are committed locally as
+`d42219f`, without pushing. The hamburger menu redesign is complete locally;
 publication remains pending. Phase 4 requires confirmation of the ancestry
 contract before implementation.
 
@@ -44,7 +45,7 @@ Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
 in `dist/`; `npm run preview` serves that bundle locally.
 
-Verification completed: 54 Vitest cases and 148 browser acceptance checks across
+Verification completed: 54 Vitest cases and 163 browser acceptance checks across
 Chromium, Firefox, and WebKit. Coverage includes cascading stitch selections,
 explicit Apply/reset confirmation, legacy-plan restoration, language switching,
 and existing planner/library workflows. Print coverage includes offline localized
@@ -54,8 +55,10 @@ Two PDF-generation checks are skipped because Playwright does not expose that
 API for Firefox/WebKit; both engines exercise print styles and the native button.
 TypeScript checking, production build, desktop/mobile layout inspection, and
 representative printed chart inspection also passed.
-Header-shortcut refinements passed 103 affected library, localization, and print
-browser checks plus production build/type checking.
+Menu coverage includes keyboard navigation, lightweight dismissal, focused
+dialogs, Save-as copies/cancellation, active/inactive renaming, filesystem and
+drag/drop imports, and preservation of existing storage, localization, and
+print behavior.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -374,10 +377,21 @@ geometry on load instead of trusting imported calculations.
 Use IndexedDB for multiple named plans. Provide save, list/open, rename, and
 delete operations, with confirmation for destructive operations and unsaved
 changes. Confirmed behavior is manual Save and automatic reopening of the most
-recently saved plan on startup. Rename by editing the active name and saving.
-Keep plan management in a native modal dialog opened by the header's Your Plans
-button, not a permanently visible panel. Close and Escape dismiss it and return
-focus to the opener; successfully opening or creating a plan also dismisses it.
+recently saved plan on startup. Use a hamburger popup menu with exactly seven
+entries: New plan, New plan from JSON, Load plan, Save as, Export current plan
+as JSON, Download printable HTML, and Manage plans. Save and Print remain
+explicit header icon buttons, not duplicated menu items.
+
+Use native popovers for the accessible, keyboard-navigable menu, with arrow,
+Home/End, Escape/Tab, and light dismissal. Load and Manage open a native modal
+list of saved plans; Manage supports renaming or deleting any selected entry
+without replacing the editor. Rename preserves active unsaved pattern edits.
+Save as opens a focused naming dialog and creates an independent saved copy,
+leaving the original untouched and making the copy active. Canceling the naming
+dialog does not mutate the current name, dirty state, or stored plans.
+New from JSON opens a filesystem chooser and drag/drop dialog. Validate before
+discard confirmation; reject multiple dropped files and oversized documents.
+Close/Cancel and Escape dismiss dialogs and restore appropriate opener focus.
 Separate current-plan actions from saved-entry actions. Label JSON export as
 exporting the current applied editor plan, not the selected saved entry.
 Offer New empty plan (default counts, no colors) and New plan from JSON.
@@ -388,10 +402,11 @@ Show saving/failure state accurately and preserve the active in-memory plan
 when storage is unavailable or a transaction fails. Deleting the active saved
 copy retains its current pattern in the tab as unsaved work.
 
-The header's floppy-disk emoji is a quick-save button: save named plans directly without
-opening the library; prompt unnamed plans in Your Plans with the name selected.
+The header's floppy-disk emoji is a quick-save button: save named plans directly
+without opening the library; prompt unnamed plans in the same naming dialog
+used by Save as, with the name selected.
 Automatic default names count as unnamed, while saved/imported names count as
-named. Explicit name edits determine whether the current name is provided.
+named. Name changes commit only after a successful save or rename.
 Disable the shortcut during operations and when already saved. Preserve draft
 validation and show failures outside the modal; restore focus to the actual
 opener on dismissal.
@@ -486,7 +501,7 @@ column labels and assembly guidance rather than shrinking cells beyond
 readability. Do not split individual chart rows unintentionally.
 
 Implemented in `src/print.ts`, integrated through `src/library.ts`. Download
-printable HTML in Your Plans or use the accessible, localized header printer
+printable HTML in the hamburger menu or use the accessible, localized header printer
 emoji button to open an isolated print tab; neither
 saves the plan. Reject unapplied calculator drafts, and provide download guidance
 if the browser blocks pop-ups. Reuse the SVG preview with an explicit locale;
@@ -576,6 +591,10 @@ budget and bound ancestry computation before allocating a full-circle graph.
     direct saving of named plans, prompt unnamed plans, move the printer emoji
     action to the header, and validate focus, errors, imports/reloads, and
     localization. Complete; depends on local-portability and printable-html.
+14. **Adding the plan menu and focused dialogs** (`plan-menu`): implement the
+    seven-entry hamburger menu, Load/Manage lists, independent Save-as copies,
+    transactional naming, filesystem/drop imports, and browser verification.
+    Complete; depends on header-shortcuts.
 
 ## Scope exclusions and considerations
 
