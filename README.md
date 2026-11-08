@@ -263,11 +263,193 @@ The generated `dist/` directory can be served by a static web host over HTTPS
 (or localhost for development). Static hosting does not require a plan-storage
 service.
 
+## Container deployment
+
+The multi-stage `Dockerfile` uses Node.js 24 LTS to install locked dependencies,
+run unit tests, and type-check/build the application. The runtime contains only
+the static bundle and unprivileged Nginx, listening on **8080** as UID/GID 101.
+There is no Node.js runtime, plan-data backend, or persistent volume.
+Nginx uses one worker, logs to standard output/error, and exposes `/healthz`.
+HTML is revalidated on each visit; hashed assets can be cached for a year.
+
+### Build and run locally
+
+From the repository root, with Docker running:
+
+```sh
+docker build --pull -t round-yoke-planner:local .
+docker run --rm --name round-yoke-planner \
+  -p 127.0.0.1:8080:8080 \
+  --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+  --cap-drop ALL --security-opt no-new-privileges \
+  round-yoke-planner:local
+```
+
+Open `http://127.0.0.1:8080`; stop with Ctrl+C. For **Podman**, build with:
+
+```sh
+podman build --format docker --pull -t round-yoke-planner:local .
+```
+
+Then substitute `podman` for `docker` in the run command. Docker image format
+retains the declared health check; Podman's default OCI format drops it.
+On macOS, start your Podman machine first.
+Neither build requires Node.js installed on the host.
+The build targets your local architecture; the release workflow builds both
+Linux AMD64 and ARM64. `--pull` refreshes the supported Node/Nginx base images.
+
+### Publish a release to GHCR
+
+[The container workflow](.github/workflows/container.yml) runs **only when a
+GitHub Release is published**, including prereleases. Ordinary pushes, pushed
+tags alone, draft releases, and release-note edits do not publish images.
+It builds and validates both architectures, then pushes a multi-platform image
+to `ghcr.io/fmeschbe/round-yoke-planner`. It does **not** deploy anything.
+Actions are SHA-pinned; authentication uses `GITHUB_TOKEN` with repository-read
+and package-write permissions, without a separate registry secret.
+
+1. Commit and push the container/workflow changes so the release's commit
+   contains them.
+2. In GitHub, open **Releases → Draft a new release**, create a version tag
+   such as `v0.1.0` targeting `main`, and generate/edit the release notes.
+3. Select **Publish release**, then check the **Publish container** Actions run.
+
+Alternatively, from an authenticated checkout:
+
+```sh
+gh release create v0.1.0 --target main --generate-notes
+```
+
+A release tagged `v0.1.0` produces tags `0.1.0`, `v0.1.0`, and
+`sha-<full-commit-SHA>`. A stable release also updates `latest`.
+For prereleases such as `v0.2.0-beta.1`, mark the GitHub release as
+**a prerelease** (or use `gh release create ... --prerelease`); these do not
+update `latest`.
+
+**One-time public access:** new GHCR packages can be private even when their
+source repository is public. After the first successful publication, open
+your GitHub profile's **Packages → round-yoke-planner → Package settings**
+and change its visibility to **Public**. Anonymous Docker/Kubernetes pulls
+then need no registry credentials.
+
+### Run a published image
+
+After publishing and making the package public:
+
+```sh
+docker pull ghcr.io/fmeschbe/round-yoke-planner:0.1.0
+docker run --rm --name round-yoke-planner \
+  -p 127.0.0.1:8080:8080 \
+  --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+  --cap-drop ALL --security-opt no-new-privileges \
+  ghcr.io/fmeschbe/round-yoke-planner:0.1.0
+```
+
+Use an explicit release version for upgrades, or
+`ghcr.io/fmeschbe/round-yoke-planner@sha256:<digest>` for an exact image.
+The published digest appears in the Actions build summary.
+Avoid `latest` for reproducible deployments. Docker/Podman automatically select
+the matching architecture. Put the container behind your existing HTTPS reverse
+proxy; the loopback binding above intentionally avoids exposing it directly.
+
+### Kubernetes
+
+[`deployment/kubernetes.yaml`](deployment/kubernetes.yaml) provides a Deployment
+and ClusterIP Service, with non-root/read-only execution, resource limits,
+health probes, and a memory-backed temporary directory. No persistent storage,
+Ingress controller, TLS configuration, or cluster credentials are supplied.
+
+Replace the example image `:0.1.0` with your published version or digest, then:
+
+```sh
+kubectl apply -f deployment/kubernetes.yaml
+kubectl rollout status deployment/round-yoke-planner
+kubectl port-forward service/round-yoke-planner 8080:80
+```
+
+The port-forward is for local verification. For normal access, connect your
+existing Ingress/TLS setup to Service `round-yoke-planner`, port **80**, at the
+website root. Use your usual namespace and deployment process.
+
+### Helm
+
+As an alternative to the raw Kubernetes manifest, install the local chart:
+
+```sh
+helm upgrade --install round-yoke-planner deployment/helm/round-yoke-planner \
+  --namespace knitting --create-namespace \
+  --set-string image.tag=0.1.0 \
+  --wait
+```
+
+For local access, run
+`kubectl -n knitting port-forward service/round-yoke-planner 8080:80`.
+Do not apply the raw manifest and Helm chart to the same resources. The chart
+defaults to its `appVersion` image tag, one replica, and a ClusterIP Service on
+port 80, with the same health probes and restricted runtime.
+[`values.yaml`](deployment/helm/round-yoke-planner/values.yaml) configures replicas,
+image repository/tag/digest, pull policy/secrets, resources, and Service type/port.
+An `image.digest` takes precedence over the tag.
+
+Optional Ingress uses your existing controller and TLS secret:
+
+```sh
+helm upgrade --install round-yoke-planner deployment/helm/round-yoke-planner \
+  --namespace knitting --create-namespace \
+  --set-string image.tag=0.1.0 \
+  --set ingress.enabled=true \
+  --set-string ingress.className=nginx \
+  --set-string ingress.host=knitting.example.org \
+  --set-string ingress.tlsSecretName=round-yoke-tls \
+  --wait
+```
+
+Replace the example hostname/class/secret with your environment's settings.
+Ingress is disabled by default and serves the website root when enabled;
+the chart does not install an Ingress controller or issue certificates.
+The chart is supplied in the repository, not published by the container workflow.
+
+### Docker Compose
+
+[`docker-compose.yml`](docker-compose.yml) builds the local source by default:
+
+```sh
+docker compose build --pull
+docker compose up -d --wait
+docker compose logs -f
+```
+
+Open `http://127.0.0.1:8080`; stop/remove the deployment with
+`docker compose down`. The service has a read-only filesystem, temporary `/tmp`,
+non-root user, dropped capabilities, CPU/memory limits, and a health check.
+It restarts unless explicitly stopped; no persistent volume is created.
+
+To use a published image without building:
+
+```sh
+ROUND_YOKE_IMAGE=ghcr.io/fmeschbe/round-yoke-planner:0.1.0 \
+  docker compose up -d --no-build --pull always --wait
+```
+
+`ROUND_YOKE_IMAGE` also accepts a full image digest reference.
+`ROUND_YOKE_PORT` overrides the host port, and `ROUND_YOKE_BIND_ADDRESS`
+overrides the default loopback address. Keep the service behind your existing
+HTTPS reverse proxy. Use the same environment overrides for later Compose
+commands. With a standalone Compose installation, use `docker-compose`
+instead of `docker compose`; Podman users can use their configured Compose
+provider. The explicit Compose health check also works with OCI-format images.
+
+**Keep a stable website origin** (scheme, hostname, and port) across upgrades.
+Plans remain in each browser's IndexedDB, not in these containers; changing
+the origin makes the old browser library inaccessible from the new address.
+Export JSON backups before moving to another origin. Use HTTPS outside localhost.
+
 ## Roadmap
 
 Phases 1–3 are implemented: the schematic planner, browser-local library and
 JSON portability, and standalone printable HTML with browser Save as PDF.
-**Phase 4** adds stitch ancestry and explicit increase techniques.
+**Phase 4** (stitch ancestry and explicit increase techniques) is parked.
+Container delivery is independent of that phase.
 
 Gauge and physical tension/drape modeling are outside the roadmap.
 See [the implementation plan](docs/implementation-plan.md) for scope and

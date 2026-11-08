@@ -31,7 +31,7 @@ development instructions. Local Git uses `main` and the GitHub repository as
 palette, color-preserving geometry edits, keyboard navigation, responsive layout,
 and SVG/dense annular previews are implemented. The six Phase 1 implementation
 todos below, the Phase 2 local-portability todo, and English/German/Bokmål localization
-and printable HTML are complete; Phase 4 remains pending. Phases 1 and 2, including modal plan
+and printable HTML are complete; Phase 4 is parked at user request. Phases 1 and 2, including modal plan
 management and collapsed instructions, were pushed through `529728b`.
 English/German/Bokmål localization and the flag-only selector were committed
 as `0229173`. Guided stitch selections are also implemented, and these
@@ -49,8 +49,9 @@ The full-screen button sits to the right of the columns/rounds indicator;
 vertical dividers separate the segment selector, clear-all action, and selection tools.
 The yoke preview also supports expanded viewing through a top-right button
 beside its mode indicator; this addition is also published on `main`.
-Phase 4 requires confirmation of the ancestry
-contract before implementation.
+Phase 4 is parked; it requires confirmation of the ancestry contract before
+any future implementation. Container delivery, Helm, and Compose are complete;
+the first release publication remains a separate manual action.
 
 Run `npm install` on a fresh checkout and `npm run dev` to open the application
 at the local URL printed by Vite. Run `npm run build` for a production bundle
@@ -665,6 +666,8 @@ Markdown export are not part of the committed phase scope.
 
 ## Phase 4 - Stitch ancestry and increase technique
 
+**Parked at user request.** No ancestry implementation is part of container delivery.
+
 Before implementation, select and document the supported increase technique(s):
 which stitch or boundary anchors an increase, where each of the two new
 stitches enters, left/right orientation, round-start convention, and whether
@@ -761,6 +764,88 @@ budget and bound ancestry computation before allocating a full-circle graph.
     expansion beside the mode badge, preserve controls/state and aspect ratio,
     restore panel/focus, localize, and verify mobile, empty, and printed previews.
     Complete; depends on compact-chart-header.
+21. **Adding container delivery** (`container-deployment`): build a non-root
+    static container; publish Linux AMD64/ARM64 images to GHCR only on published
+    GitHub releases; document Docker/Podman, public package visibility, and
+    Kubernetes deployment. Validate locally with Podman without changing Docker
+    contexts or publishing/deploying a release. Complete; depends on preview-fullscreen.
+22. **Adding Helm deployment** (`helm-deployment`): supply a configurable chart
+    for the existing image, Deployment/Service, and optional Ingress/TLS using
+    an existing controller/secret. Preserve restricted runtime defaults and
+    validate linting, rendering, schema, packaging, and invalid inputs.
+    Complete; depends on container-deployment.
+23. **Adding Compose deployment** (`compose-deployment`): provide root
+    `docker-compose.yml` with local builds or explicit published images,
+    configurable host binding/port, restricted runtime, and health checks.
+    Verify build/start/health/browser persistence through the existing Podman
+    API without changing Docker contexts. Complete; depends on container-deployment.
+
+## Container delivery
+
+Provide a multi-stage Node.js 24 LTS build with locked npm dependencies, unit
+tests, and type-check/production build. Serve only the resulting static assets
+through unprivileged Nginx on port 8080 as UID/GID 101. Use one worker, standard
+output/error logs, `/healthz`, revalidated HTML, and immutable hashed assets.
+Support read-only execution with only a temporary `/tmp`; no server plan
+storage, Node runtime, or persistent volume is introduced.
+
+Publish from `release: published`, not ordinary pushes. Use SHA-pinned Actions,
+`GITHUB_TOKEN` with contents-read/packages-write, Buildx/QEMU for Linux AMD64
+and ARM64, release/version and full-SHA tags, and stable-only `latest`.
+Publishing is not deployment. Do not create a release during implementation.
+Document the one-time GHCR visibility change to Public after first publication.
+
+Include Docker/Podman build/run commands and a minimal Kubernetes Deployment/
+Service with probes, resource limits, restricted security context, and
+memory-backed temporary storage. Existing reverse proxy/Ingress/TLS and rollout
+processes remain host responsibilities. Recommend explicit versions/digests and
+a stable website origin to preserve browser-local IndexedDB access.
+
+Validate native/emulated images with the user-selected Podman runtime, static
+HTTP/health/cache behavior, non-root/read-only execution, and browser loading/
+local persistence. Validate workflow and Kubernetes manifests. Leave existing
+Podman machines and unrelated containers unchanged.
+
+Implemented in `Dockerfile`, `.dockerignore`, `deployment/nginx.conf`,
+`deployment/kubernetes.yaml`, and `.github/workflows/container.yml`, with build/
+release/deployment instructions in README. Podman builds use Docker image format
+to retain the declared health check.
+
+Verification passed for native ARM64 and emulated AMD64 builds and runtimes,
+including non-root/read-only execution with dropped capabilities and 64 MiB
+memory limits, image health checks, HTTP health/assets/MIME types/cache behavior,
+and 404s for missing assets/source paths. All three browser engines exercised
+painting, preview, IndexedDB save/reload, JSON export, and same-origin GET-only
+traffic against both containers. Actionlint passed, and both Kubernetes resources
+passed strict schema validation. No GitHub release/image publication or cluster
+deployment was performed; publishing will first be exercised on a real release.
+
+### Helm and Compose
+
+The local chart in `deployment/helm/round-yoke-planner` provides release-scoped
+Deployment/Service selectors, configurable replicas, image repository/tag/digest,
+pull policy/secrets, Service type/port, and resources. A digest overrides the
+tag; the chart appVersion is the default tag. Optional Ingress serves the website
+root and requires a hostname, with an existing controller and optional existing
+TLS secret. It installs no controller, certificate issuer, or persistent volume.
+Use Helm instead of the raw manifest for the same resources. The release workflow
+still publishes only container images, not Helm packages.
+
+Root `docker-compose.yml` builds locally by default, with full image/version/
+digest overrides and configurable loopback address/port. Preserve UID/GID 101,
+read-only execution, temporary `/tmp`, dropped capabilities, CPU/memory limits,
+and restart-unless-stopped. An explicit Compose health check also supports
+Podman's OCI image format. README documents both deployment alternatives.
+
+Helm strict linting and packaging passed; seven rendered resources across
+default, Ingress/TLS/custom Service, and digest configurations passed strict
+Kubernetes schema validation. Missing Ingress hostname/image repository fail
+clearly, and digest precedence was checked. Compose configuration/overrides,
+actual build/start/health through Podman, runtime restrictions, HTTP behavior,
+and browser painting/preview/IndexedDB save-reload passed. Validation used an
+isolated Docker client configuration because the existing Desktop credential
+helper is unavailable. No global Docker settings or existing Podman machines
+were changed, and no cluster deployment or publication was performed.
 
 ## Scope exclusions and considerations
 

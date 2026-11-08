@@ -1,0 +1,28 @@
+replicaCount: 1
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/fmeschbe/round-yoke-planner
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 250m
+    memory: 64Mi
+
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  tlsSecretName: ""
