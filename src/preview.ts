@@ -142,8 +142,8 @@ export class Preview {
         const inner = this.inner + (row.round - 1) * step;
         for (let repeat = 0; repeat < visibleSegments; repeat++) {
           row.columns.forEach((column, index) => {
-            const start = this.start + repeat * sector + index / row.columns.length * sector;
-            const end = this.start + repeat * sector + (index + 1) / row.columns.length * sector;
+            const start = this.start + span - (repeat + (index + 1) / row.columns.length) * sector;
+            const end = this.start + span - (repeat + index / row.columns.length) * sector;
             const path = svgElement('path', {
               d: annularPath(inner, inner + step, start, end),
               'data-round': row.round, 'data-column': column,
@@ -172,7 +172,7 @@ export class Preview {
         }));
       } else {
         for (let k = 0; k < perRound; k++) {
-          const angle = this.start + k / geometry.calculation.ip * TAU;
+          const angle = this.start + span - k / geometry.calculation.ip * TAU;
           markers.append(svgElement('path', {
             d: `M ${point(inner, angle)} L ${point(inner + step, angle)}`,
             'data-increase-round': row.round,
@@ -207,7 +207,7 @@ export class Preview {
         const py = bounds.y + (y + 0.5) / canvas.height * bounds.height;
         const radius = Math.hypot(px, py);
         if (radius < this.inner || radius >= RADIUS) continue;
-        const angle = (Math.atan2(px, -py) - this.start + TAU) % TAU;
+        const angle = (this.start + span - Math.atan2(px, -py) + TAU) % TAU;
         if (angle >= span) continue;
         const roundIndex = Math.min(colors.length - 1, Math.floor((radius - this.inner) / step));
         const rowColors = colors[roundIndex];

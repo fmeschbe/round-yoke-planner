@@ -39,7 +39,9 @@ refinements are published through `ba15450`. Phase 3 is committed locally as
 `a3e3c5b`, without pushing. Header save/print shortcuts are committed locally as
 `d42219f`, without pushing. The hamburger menu redesign is committed as
 `4a03a28`, without pushing. Color-preserving geometry changes and optional
-initial/final plain rounds are committed locally without pushing.
+initial/final plain rounds are committed as `7c1b0d9` locally without pushing.
+The preview's angular stitch direction is reversed and committed locally without pushing,
+so bottom-centered sectors match the chart's left-to-right order.
 Phase 4 requires confirmation of the ancestry
 contract before implementation.
 
@@ -67,6 +69,10 @@ growing rectangles with fewer real stitches, preview updates, and JSON round tri
 Plain-round coverage includes independent increase timing, continuous/section
 numbering, edge-anchored remapping, exact truncation losses, equal-count previews,
 validation/budgets, localized drafts, persistence/New reset, and offline panels.
+Preview-direction verification passed 100 affected browser checks across all
+three engines, with two PDF API skips. Coverage includes colored vector repeats,
+raster pixels at repeat boundaries, mirrored markers, centered bounds, and
+localized printable preview orientation. Unit cases and production build pass.
 Run `npm test` for model/state tests. Install browser engines with
 `npx playwright install --only-shell chromium firefox webkit`, then run
 `npm run test:browser -- --workers=3` for browser acceptance.
@@ -349,8 +355,11 @@ uniformly by angle, and their colors come from the row's active chart slots.
 
 Center the complete visible sector span at 6 o'clock, with starting angle
 `pi - span / 2`. Apply that rotation to vector stitches, increase overlays,
-sector bounds, and inverse-polar raster lookup alike. Full-circle orientation
-remains unchanged.
+sector bounds, and inverse-polar raster lookup alike. Map stitches
+counterclockwise from the sector's ending angle so bottom-centered sectors
+match the chart's left-to-right order. Reflect increase markers in the same
+direction. Full circles keep their round start at 12 o'clock and proceed
+counterclockwise. This changes only rendering, not stored chart coordinates.
 
 Normalize outer radius to the viewport and set inner radius to
 `outerRadius * SI / SF`, or an explicitly arbitrary 70% inner radius when
@@ -671,6 +680,10 @@ budget and bound ancestry computation before allocating a full-circle graph.
     optional SI/SF sections, independent increase timing, continuous/section
     numbering, edge-aware color remapping, persistence, printing, and focused
     validation. Complete; depends on preserve-chart-colors and printable-html.
+17. **Reversing preview stitch direction** (`preview-direction`): reverse
+    vector/raster mapping and markers, retain sector centering and stored
+    colors, and verify chart/preview and printable orientation. Complete;
+    depends on plain-rounds.
 
 ## Scope exclusions and considerations
 

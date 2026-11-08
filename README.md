@@ -181,6 +181,9 @@ The preview and fixed chart slots are schematic. They do not model stitch
 ancestry, a specific increase technique, gauge, tension, or physical drape.
 Visible preview sectors are centered at 6 o'clock. Instructions above both
 views are collapsed by default and can be expanded when needed.
+Stitches progress counterclockwise, so bottom-centered sectors match the
+chart's left-to-right order. Full circles start at 12 o'clock. Increase markers
+and printable previews use the same orientation; stored colors are unchanged.
 
 ## Development
 

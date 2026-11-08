@@ -70,6 +70,15 @@ for (const [locale, printButton, legend] of [
       parseFloat(getComputedStyle(cell).borderTopWidth))).toBeGreaterThanOrEqual(1.8);
     await expect(document.locator('.schedule tbody tr')).toHaveCount(2);
     await expect(document.locator('.preview .preview-stitches path[data-round="1"][data-column="0"]')).toHaveCount(2);
+    const positions = await document.locator('.preview svg').evaluate(svg => {
+      const x = (column: number) => {
+        const path = svg.querySelector(`.preview-stitches path[data-round="1"][data-column="${column}"]`) as SVGGraphicsElement;
+        const box = path.getBBox();
+        return box.x + box.width / 2;
+      };
+      return [x(0), x(2)];
+    });
+    expect(positions[0]).toBeLessThan(positions[1]);
     await expect(page.locator('#saved-plans option')).toHaveCount(0);
     await document.close();
   });

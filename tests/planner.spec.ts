@@ -285,9 +285,13 @@ test('renders dense full-circle previews without unbounded SVG cells', async ({ 
     canvas.height = source.height;
     const context = canvas.getContext('2d')!;
     context.drawImage(source, 0, 0);
-    return [...context.getImageData(Math.floor(source.width / 2), 0, 1, 1).data];
+    return {
+      left: [...context.getImageData(Math.floor(source.width / 2) - 1, 0, 1, 1).data],
+      right: [...context.getImageData(Math.floor(source.width / 2), 0, 1, 1).data],
+    };
   });
-  expect(pixel).toEqual([255, 0, 0, 255]);
+  expect(pixel.left).toEqual([255, 0, 0, 255]);
+  expect(pixel.right).toEqual([255, 255, 255, 255]);
   await expect(page.locator('#preview path')).toHaveCount(12);
   await calculate(page, '8', '2', '8');
   await setColor(page.locator('#background'), '#000000');
@@ -378,8 +382,8 @@ test('centers one or multiple visible sectors at six oclock', async ({ page }) =
     await page.locator('#visible-segments').blur();
     const geometry = await page.locator('#preview svg').evaluate(svg => {
       const paths = [...svg.querySelectorAll('.preview-stitches path[data-round="2"]')];
-      const first = paths[0].getAttribute('d')!.split(' ').map(Number);
-      const last = paths.at(-1)!.getAttribute('d')!.split(' ').map(Number);
+      const first = paths.at(-1)!.getAttribute('d')!.split(' ').map(Number);
+      const last = paths[0].getAttribute('d')!.split(' ').map(Number);
       const start = Math.atan2(first[1], -first[2]);
       const end = Math.atan2(last[17], -last[18]) + Math.PI * 2;
       const bounds = (svg.querySelector('.preview-stitches') as SVGGraphicsElement).getBBox();
@@ -389,9 +393,36 @@ test('centers one or multiple visible sectors at six oclock', async ({ page }) =
         bottom: bounds.y + bounds.height,
       };
     });
+
     expect(geometry.midpoint).toBeCloseTo(Math.PI);
     expect(geometry.centerX).toBeCloseTo(0);
     expect(geometry.bottom).toBeCloseTo(200);
+  }
+});
+
+test('maps chart columns left to right in the bottom-centered preview and its repeats', async ({ page }) => {
+  await calculate(page, '8', '2', '16');
+  await page.locator('#segments').selectOption('4');
+  await addColor(page, '#ff0000');
+  await cell(page, 2, 0).click();
+  await addColor(page, '#0000ff');
+  await cell(page, 2, 3).click();
+  for (const visible of [1, 2]) {
+    await page.locator('#visible-segments').fill(String(visible));
+    await page.locator('#visible-segments').blur();
+    const centers = await page.locator('#preview svg').evaluate(svg => {
+      const center = (column: number) => [...svg.querySelectorAll(`.preview-stitches path[data-round="2"][data-column="${column}"]`)]
+        .map(path => {
+          const box = (path as SVGGraphicsElement).getBBox();
+          return { x: box.x + box.width / 2, color: path.getAttribute('fill') };
+        });
+      return { left: center(0), right: center(3) };
+    });
+    for (let repeat = 0; repeat < visible; repeat++) {
+      expect(centers.left[repeat].x).toBeLessThan(centers.right[repeat].x);
+      expect(centers.left[repeat].color).toBe('#ff0000');
+      expect(centers.right[repeat].color).toBe('#0000ff');
+    }
   }
 });
 
@@ -417,7 +448,8 @@ test('centers dense partial previews and their increase markers consistently', a
       y: Number(image.getAttribute('y')),
       width: Number(image.getAttribute('width')),
       height: Number(image.getAttribute('height')),
-      bottom: [...context.getImageData(Math.floor(source.width / 2), source.height - 1, 1, 1).data],
+      bottom: [...context.getImageData(Math.floor(source.width / 2) - 1, source.height - 1, 1, 1).data],
+      bottomRight: [...context.getImageData(Math.floor(source.width / 2), source.height - 1, 1, 1).data],
       center: [...context.getImageData(Math.floor(source.width / 2), Math.floor(source.height / 2), 1, 1).data],
     };
   });
@@ -426,10 +458,11 @@ test('centers dense partial previews and their increase markers consistently', a
   expect(geometry.width).toBeCloseTo(400);
   expect(geometry.height).toBeCloseTo(200);
   expect(geometry.bottom).toEqual([255, 0, 0, 255]);
+  expect(geometry.bottomRight).toEqual([255, 255, 255, 255]);
   expect(geometry.center[3]).toBe(0);
   const marker = await page.locator('#preview path[data-increase-round="10"]').getAttribute('d');
   const coordinates = marker!.split(' ');
-  expect(Number(coordinates[1])).toBeGreaterThan(0);
+  expect(Number(coordinates[1])).toBeLessThan(0);
   expect(Number(coordinates[2])).toBeCloseTo(0);
 });
 
