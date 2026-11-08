@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5f3ed">
+    <title>Round Yoke - Knitting planner</title>
+  </head>
+  <body>
+    <main>
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">A little planning, a lot of possibilities</p>
+          <h1>Round Yoke</h1>
+          <p class="subtitle">Plan your increases. Find your pattern.</p>
+        </div>
+        <span class="session-badge">Browser only &middot; not saved</span>
+      </header>
+
+      <section class="setup panel" aria-labelledby="setup-heading">
+        <div class="setup-inputs">
+          <h2 id="setup-heading">Start with your stitches</h2>
+          <form id="calculator" novalidate>
+            <div class="input-fields">
+              <label for="si">Initial stitches <span>SI</span>
+                <input id="si" name="si" type="number" min="1" step="1" value="64" aria-describedby="si-error">
+                <small id="si-error" class="field-error"></small>
+              </label>
+              <label for="ip">Increase points <span>IP</span>
+                <input id="ip" name="ip" type="number" min="2" step="2" value="8" aria-describedby="ip-error">
+                <small id="ip-error" class="field-error"></small>
+              </label>
+              <label for="sf">Final stitches <span>SF</span>
+                <input id="sf" name="sf" type="number" min="1" step="1" value="160" aria-describedby="sf-error">
+                <small id="sf-error" class="field-error"></small>
+              </label>
+            </div>
+            <button type="submit" class="primary">Calculate / Apply</button>
+          </form>
+          <p id="calculation-error" class="error" role="alert"></p>
+        </div>
+        <div class="setup-result">
+          <h2>Your yoke, at a glance</h2>
+          <div id="results" aria-live="polite"></div>
+          <details>
+            <summary>How the calculation works</summary>
+            <ul>
+              <li>Increase points are evenly spaced; each adds two stitches.</li>
+              <li>Increase every IP / 2 rounds, starting at round IP / 2.
+                There are IP / 2 &minus; 1 plain rounds between increases.</li>
+              <li>Finish on the final increase round. Starting stitches are not an extra row.</li>
+              <li>Use positive whole numbers, even IP, and SI divisible by IP.
+                SF &minus; SI must be divisible by 2 &times; IP.</li>
+              <li>The preview is schematic, not a model of gauge, stitch ancestry, or tension.</li>
+            </ul>
+          </details>
+        </div>
+      </section>
+
+      <section class="editor" aria-label="Pattern editor">
+        <section class="preview-panel panel" aria-labelledby="preview-heading">
+          <div class="section-heading">
+            <div><p class="eyebrow">See it come together</p><h2 id="preview-heading">Yoke preview</h2></div>
+            <span id="preview-mode" class="badge"></span>
+          </div>
+          <div class="preview-controls">
+            <label for="visible-segments">Visible segments
+              <input id="visible-segments" type="number" value="1" min="1" step="1">
+            </label>
+            <button id="full-circle" type="button">Full circle</button>
+          </div>
+          <p id="visible-error" class="error" role="alert"></p>
+          <div id="preview"></div>
+          <p id="preview-description" class="hint"></p>
+          <p class="hint">Row 1 begins at the inner edge. Uncolored stitches use the background;
+            colors repeat in every segment. Dashed marks show increase points.</p>
+        </section>
+
+        <section class="chart-panel panel" aria-labelledby="chart-heading">
+          <div class="section-heading">
+            <div><p class="eyebrow">One segment, repeated</p><h2 id="chart-heading">Stitch chart</h2></div>
+            <span id="chart-size" class="badge"></span>
+          </div>
+          <div class="chart-controls">
+            <label for="segments">Repeating segments
+              <select id="segments" aria-describedby="segment-description"></select>
+            </label>
+            <p id="segment-description" class="hint"></p>
+          </div>
+          <div class="chart-and-palette">
+            <div class="chart-area">
+              <div id="chart" class="chart-scroll" role="region" aria-label="Scrollable stitch chart"></div>
+              <p class="hint">Read from the bottom up. Hatched slots have no stitch.
+                Dashed marks indicate increases. Use arrow keys to move, Space or Enter to paint.</p>
+            </div>
+            <aside class="palette" aria-labelledby="palette-heading">
+              <h3 id="palette-heading">Your colors</h3>
+              <div id="palette-colors"></div>
+              <div class="add-color">
+                <label for="new-color">New color
+                  <input id="new-color" type="color" value="#ba5365">
+                </label>
+                <button id="add-color" type="button">Add color</button>
+              </div>
+              <label for="background">Background
+                <input id="background" type="color" value="#ffffff">
+              </label>
+              <p class="hint">Used for uncolored stitches. Editing a color updates all its stitches.</p>
+            </aside>
+          </div>
+        </section>
+      </section>
+      <p id="status" class="sr-only" role="status"></p>
+      <footer>Made for experimenting. Your work stays in this tab and is lost when you reload.</footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
