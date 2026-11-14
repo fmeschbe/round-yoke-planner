@@ -1,6 +1,6 @@
 {
   "name": "Round Yoke Planner",
-  "short_name": "ryp",
+  "short_name": "Round Yoke",
   "icons": [
     {
       "src": "/assets/pwa-64x64.png",
@@ -28,4 +28,3 @@
   "background_color": "#ffffff",
   "display": "standalone"
 }
-
