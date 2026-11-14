@@ -311,6 +311,16 @@ The generated `dist/` directory can be served by a static web host over HTTPS
 (or localhost for development).
 Static hosting does not require a plan-storage service.
 
+## Webserver deployment
+
+The built web application can easily be deployed into a static web server, for
+example:
+
+```sh
+npm run test && npm run build
+scp -r ./dist/* serverhost:public_html
+```
+
 ## Container deployment
 
 The multi-stage `Dockerfile` uses Node.js 24 LTS to install locked dependencies,
