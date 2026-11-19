@@ -8,7 +8,7 @@ describe('guided stitch selections', () => {
       const initial = stitchSelections({ ...DEFAULT_INPUTS, ip }, DEFAULT_INPUTS);
       for (const { value: si } of initial.options.si) {
         expect(si).toBeGreaterThanOrEqual(16);
-        expect(si).toBeLessThanOrEqual(100);
+        expect(si).toBeLessThanOrEqual(200);
         expect(si % ip).toBe(0);
         const final = stitchSelections({ ip, si, sf: 160 }, DEFAULT_INPUTS);
         expect(final.options.sf.length).toBeGreaterThan(0);
@@ -19,6 +19,15 @@ describe('guided stitch selections', () => {
         }
       }
     }
+  });
+
+  it('offers the expanded initial range and cascades final stitches above the initial count', () => {
+    const result = stitchSelections({ ip: 4, si: 200, sf: 160 }, DEFAULT_INPUTS);
+    expect(result.options.si).toContainEqual({ value: 200, fromPlan: false });
+    expect(result.options.si.some(option => option.value > 200)).toBe(false);
+    expect(result.values).toEqual({ ip: 4, si: 200, sf: 200 });
+    expect(result.options.sf.every(option => option.value >= 200)).toBe(true);
+    expect(stitchSelections({ ip: 4, si: 200, sf: 248 }, DEFAULT_INPUTS).values.sf).toBe(248);
   });
 
   it('retains valid dependent selections and otherwise uses the smallest option', () => {

@@ -251,7 +251,7 @@ numeric controls, while the mathematical/document validation contract remains.
 
 Order the calculator fields IP, SI, SF. Offer increase-point presets 4, 8, 16,
 and 32, with 16 selected by default. New plans use SI=64 and SF=160.
-Initial choices are multiples of the selected IP in the inclusive range 16–100.
+Initial choices are multiples of the selected IP in the inclusive range 16–200.
 Final choices are reachable values in the inclusive range 100–300, with
 `SF >= SI` and `(SF - SI) % (2 * IP) === 0`. Filter final choices through the
 existing calculator so a feasible chart must also exist.

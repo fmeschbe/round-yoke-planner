@@ -14,16 +14,28 @@ test('leads with increase presets and derives bounded, valid stitch selections',
   await expect(page.locator('#ip')).toHaveValue('16');
   await expect(page.locator('#si')).toHaveValue('64');
   await expect(page.locator('#sf')).toHaveValue('160');
-  await expect(page.locator('#si option')).toHaveText(['16', '32', '48', '64', '80', '96']);
+  await expect(page.locator('#si option')).toHaveText(['16', '32', '48', '64', '80', '96', '112', '128', '144', '160', '176', '192']);
   await expect(page.locator('#sf option')).toHaveText(['128', '160', '192', '224', '256', '288']);
   await page.locator('#ip').selectOption('32');
   await expect(page.locator('#si')).toHaveValue('64');
   await expect(page.locator('#sf')).toHaveValue('128');
-  await expect(page.locator('#si option')).toHaveText(['32', '64', '96']);
+  await expect(page.locator('#si option')).toHaveText(['32', '64', '96', '128', '160', '192']);
   await expect(page.locator('#sf option')).toHaveText(['128', '192', '256']);
   await expect(page.locator('.round-total strong')).toHaveText('24');
   await page.locator('#calculator button').click();
   await expect(page.locator('.round-total strong')).toHaveText('16');
+});
+
+test('allows 200 initial stitches and applies a reachable final count', async ({ page }) => {
+  await page.locator('#ip').selectOption('4');
+  await page.locator('#si').selectOption('200');
+  await expect(page.locator('#sf')).toHaveValue('200');
+  await page.locator('#sf').selectOption('248');
+  await page.locator('#calculator button').click();
+  await expect(page.locator('.round-total strong')).toHaveText('12');
+  await expect(page.locator('#si')).toHaveValue('200');
+  await expect(page.locator('#sf')).toHaveValue('248');
+  await expect(page.locator('#chart tbody tr')).toHaveCount(12);
 });
 
 test('cascades to smallest valid choices without applying or discarding the current pattern', async ({ page }) => {

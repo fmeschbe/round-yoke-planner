@@ -37,7 +37,7 @@ translated.
 
 1. Choose **IP** (increase points) first:
    **4, 8, 16, or 32**, initially **16**.
-   Select **SI** (initial stitches) from valid multiples of IP in **16–100**,
+   Select **SI** (initial stitches) from valid multiples of IP in **16–200**,
    then **SF** (final stitches) from reachable targets in **100–300**.
    Optionally add **Initial plain rounds** and **Final plain rounds**.
    Select **Calculate / Apply** to update the pattern.

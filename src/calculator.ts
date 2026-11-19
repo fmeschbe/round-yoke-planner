@@ -22,7 +22,7 @@ export function stitchSelections(draft: Inputs, applied: Inputs) {
   const ipOptions = choices([4, 8, 16, 32], applied.ip);
   const ip = retain(draft.ip, ipOptions);
   const siOptions = choices(
-    Array.from({ length: 85 }, (_, i) => i + 16).filter(si => si % ip === 0),
+    Array.from({ length: 185 }, (_, i) => i + 16).filter(si => si % ip === 0),
     ip === applied.ip ? applied.si : undefined,
   );
   const si = retain(draft.si, siOptions);
